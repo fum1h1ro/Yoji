@@ -1,0 +1,9 @@
+{
+    "name": "com.fum1h1ro.yoji",
+    "displayName": "Yoji",
+    "version": "0.0.1",
+    "unity": "6000.4",
+    "description": "Wireframe",
+    "dependencies": {
+    }
+}

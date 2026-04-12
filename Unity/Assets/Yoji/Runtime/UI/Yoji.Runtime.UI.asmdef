@@ -1,0 +1,16 @@
+{
+    "name": "Yoji.Runtime.UI",
+    "rootNamespace": "",
+    "references": [
+        "GUID:543e6d7d0afb7481185eb566ed724beb"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
