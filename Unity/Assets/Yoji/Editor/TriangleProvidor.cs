@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Yoji.Editor
 {
-    public class TriangleProvidor
+    public class TriangleProvidor : IDisposable
     {
         public struct Vertex
         {
@@ -208,6 +208,10 @@ namespace Yoji.Editor
             //foreach (var t in Triangles) Debug.Log(t.ToString());
             Sort();
             foreach (var t in Triangles) Debug.Log(t.ToString());
+        }
+
+        public void Dispose()
+        {
         }
 
         // 同一座標の頂点をまとめるためのテーブルを作る
