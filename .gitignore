@@ -1,0 +1,6 @@
+Unity/Library
+Unity/Logs
+Unity/Temp
+Unity/UserSettings
+Unity/Assets/SceneDependencyCache*
+.DS_Store
