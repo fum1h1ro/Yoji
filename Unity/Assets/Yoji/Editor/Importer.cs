@@ -27,7 +27,9 @@ namespace Yoji.Editor
             var assetDir = Path.GetDirectoryName(assetPath);
             var setting =
                 AssetDatabase.FindAssets("t:ConvertSettings", new[]{ assetDir })
-                    .Select(x => AssetDatabase.LoadAssetAtPath<ConvertSettings>(AssetDatabase.GUIDToAssetPath(x)))
+                    .Select(x => AssetDatabase.GUIDToAssetPath(x))
+                    .Where(x => Path.GetDirectoryName(x) == assetDir)
+                    .Select(x => AssetDatabase.LoadAssetAtPath<ConvertSettings>(x))
                     .FirstOrDefault();
             if (setting == null) return;
 
