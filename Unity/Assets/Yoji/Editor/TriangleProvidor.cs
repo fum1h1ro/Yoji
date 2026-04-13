@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Yoji.Editor
 {
@@ -17,10 +18,10 @@ namespace Yoji.Editor
                 Value = v % Max;
             }
 
-            public static Vertex A = new Vertex(0);
-            public static Vertex B = new Vertex(1);
-            public static Vertex C = new Vertex(2);
-            public static Vertex[] Values = new Vertex[]{ Vertex.A, Vertex.B, Vertex.C };
+            public static readonly Vertex A = new Vertex(0);
+            public static readonly Vertex B = new Vertex(1);
+            public static readonly Vertex C = new Vertex(2);
+            public static readonly Vertex[] Values = new Vertex[]{ Vertex.A, Vertex.B, Vertex.C };
             public const int Max = 3;
 
             public Vertex Add(int offset) => (Vertex)(Value + offset);
@@ -39,10 +40,10 @@ namespace Yoji.Editor
                 Value = ((a & 0xff) << 16) | (b & 0xff);
             }
 
-            public static Edge AB = new Edge(Vertex.A, Vertex.B);
-            public static Edge BC = new Edge(Vertex.B, Vertex.C);
-            public static Edge CA = new Edge(Vertex.C, Vertex.A);
-            public static Edge[] Values = new Edge[]{ Edge.AB, Edge.BC, Edge.CA };
+            public static readonly Edge AB = new Edge(Vertex.A, Vertex.B);
+            public static readonly Edge BC = new Edge(Vertex.B, Vertex.C);
+            public static readonly Edge CA = new Edge(Vertex.C, Vertex.A);
+            public static readonly Edge[] Values = new Edge[]{ Edge.AB, Edge.BC, Edge.CA };
             public const int Max = 3;
 
             public Vertex First => (Vertex)((Value >> 16) & 0xff);
@@ -70,17 +71,32 @@ namespace Yoji.Editor
             public override string ToString() => $"EdgeID:({First}, {Second})";
         }
 
+        public struct BoneWeightSpan
+        {
+            public readonly int Index;
+            public readonly int Size;
+
+            public BoneWeightSpan(int index, int size)
+            {
+                Index = index;
+                Size = size;
+            }
+        }
+
         public class Triangle
         {
             private readonly TriangleProvidor Providor;
             public readonly int SubMeshIndex;
             private readonly int[] PositionIndices = new int[Vertex.Max];
-            private readonly int[] ColorIndices = new int[Vertex.Max];
+            private readonly Vector3[] Positions = new Vector3[Vertex.Max];
+            //private readonly int[] ColorIndices = new int[Vertex.Max];
+            private readonly Color32[] Colors = new Color32[Vertex.Max];
+            private BoneWeightSpan[] BoneWeights = null;
 
             public int GetPositionIndex(Vertex v) => PositionIndices[v];
             public (int, int) GetPositionIndices(Edge e) => (PositionIndices[e.First], PositionIndices[e.Second]);
-            public int GetColorIndex(Vertex v) => ColorIndices[v];
-            public (int, int) GetColorIndices(Edge e) => (ColorIndices[e.First], ColorIndices[e.Second]);
+            //public int GetColorIndex(Vertex v) => ColorIndices[v];
+            //public (int, int) GetColorIndices(Edge e) => (ColorIndices[e.First], ColorIndices[e.Second]);
 
             internal Triangle(TriangleProvidor providor, int submesh, int posA, int posB, int posC, int colA, int colB, int colC)
             {
@@ -89,19 +105,31 @@ namespace Yoji.Editor
                 PositionIndices[Vertex.A] = posA;
                 PositionIndices[Vertex.B] = posB;
                 PositionIndices[Vertex.C] = posC;
-                ColorIndices[Vertex.A] = colA;
-                ColorIndices[Vertex.B] = colB;
-                ColorIndices[Vertex.C] = colC;
+                Positions[Vertex.A] = providor.PositionArray[posA];
+                Positions[Vertex.B] = providor.PositionArray[posB];
+                Positions[Vertex.C] = providor.PositionArray[posC];
+                //ColorIndices[Vertex.A] = colA;
+                //ColorIndices[Vertex.B] = colB;
+                //ColorIndices[Vertex.C] = colC;
+                Colors[Vertex.A] = (providor.HasColor)? providor.ColorArray[colA] : Color.white;
+                Colors[Vertex.B] = (providor.HasColor)? providor.ColorArray[colB] : Color.white;
+                Colors[Vertex.C] = (providor.HasColor)? providor.ColorArray[colC] : Color.white;
             }
 
-            public Vector3 GetPosition(Vertex v) => Providor.PositionArray[GetPositionIndex(v)];
-            public (Vector3 First, Vector3 Second) GetPositions(Edge e) => (GetPosition(e.First), GetPosition(e.Second));
-            public Color GetColor(Vertex v)
+            internal void AddBoneWeights(BoneWeightSpan spanA, BoneWeightSpan spanB, BoneWeightSpan spanC)
             {
-                if (!Providor.HasColor) return Color.white;
-                return Providor.ColorArray[GetColorIndex(v)];
+                Assert.IsNull(BoneWeights);
+                BoneWeights = new BoneWeightSpan[Vertex.Max];
+                BoneWeights[Vertex.A] = spanA;
+                BoneWeights[Vertex.B] = spanB;
+                BoneWeights[Vertex.C] = spanC;
             }
+
+            public Vector3 GetPosition(Vertex v) => Positions[v];
+            public (Vector3 First, Vector3 Second) GetPositions(Edge e) => (GetPosition(e.First), GetPosition(e.Second));
+            public Color GetColor(Vertex v) => Colors[v];
             public (Color First, Color Second) GetColors(Edge e) => (GetColor(e.First), GetColor(e.Second));
+            public bool HasBoneWeights => BoneWeights != null;
 
             // Edgeを共有している三角形
             public Triangle GetOtherTriangle(Edge e)
@@ -168,6 +196,7 @@ namespace Yoji.Editor
                     $"Index: {GetPositionIndex(Vertex.A)}, {GetPositionIndex(Vertex.B)}, {GetPositionIndex(Vertex.C)}\n" +
                     $"Position: {GetPosition(Vertex.A)}, {GetPosition(Vertex.B)}, {GetPosition(Vertex.C)}\n" +
                     $"Color: {GetColor(Vertex.A)}, {GetColor(Vertex.B)}, {GetColor(Vertex.C)}\n" +
+                    $"BoneWeights: {(HasBoneWeights? $"{BoneWeights[Vertex.A].Size}, {BoneWeights[Vertex.B].Size}, {BoneWeights[Vertex.C].Size}" : "None")}\n" +
                     $"Normal: {FaceNormal}\n" +
                     $"Longest: {FindLongestEdge()}: {CalculateEdgeLengths()[FindLongestEdge().First]}\n" +
                     $"EdgeID: {GetEdgeID(Edge.AB)}-{GetEdgeID(Edge.BC)}-{GetEdgeID(Edge.CA)}\n" +
@@ -182,11 +211,33 @@ namespace Yoji.Editor
         private Dictionary<EdgeID, List<Triangle>> TrianglesWithEdge = new Dictionary<EdgeID, List<Triangle>>();
         private List<Vector3> Positions = new List<Vector3>();
         private List<Color> Colors = new List<Color>();
+        private byte[] BonesPerVertex;
+        private BoneWeight1[] BoneWeights;
+        private List<BoneWeightSpan> BoneWeightSpans = new List<BoneWeightSpan>();
 
         public TriangleProvidor(Mesh mesh)
         {
             mesh.GetVertices(Positions);
             mesh.GetColors(Colors);
+
+            BonesPerVertex = mesh.GetBonesPerVertex().ToArray();
+            BoneWeights = mesh.GetAllBoneWeights().ToArray();
+            var hasBoneWeights = BoneWeights.Length > 0;
+            if (hasBoneWeights)
+            {
+                var boneWeightIndex = 0;
+                for (var i = 0; i < mesh.vertexCount; ++i)
+                {
+                    var numberOfBonesForThisVertex = (int)BonesPerVertex[i];
+                    BoneWeightSpans.Add(new BoneWeightSpan(boneWeightIndex, numberOfBonesForThisVertex));
+                    boneWeightIndex += numberOfBonesForThisVertex;
+                }
+            }
+            Debug.Log($"hasBoneWeights:{hasBoneWeights}, vertexCount:{mesh.vertexCount}, boneWeightCount:{BoneWeights.Length}");
+
+
+
+
             var table = MakeTranslateTable();
             for (int smi = 0; smi < mesh.subMeshCount; ++smi)
             {
@@ -202,7 +253,15 @@ namespace Yoji.Editor
                     int colA = idxA;
                     int colB = idxB;
                     int colC = idxC;
-                    Add(smi, posA, posB, posC, colA, colB, colC);
+                    var tri = Add(smi, posA, posB, posC, colA, colB, colC);
+
+                    if (hasBoneWeights)
+                    {
+                        var spanA = BoneWeightSpans[posA];
+                        var spanB = BoneWeightSpans[posB];
+                        var spanC = BoneWeightSpans[posC];
+                        tri.AddBoneWeights(spanA, spanB, spanC);
+                    }
                 }
             }
             //foreach (var t in Triangles) Debug.Log(t.ToString());
@@ -230,7 +289,7 @@ namespace Yoji.Editor
             return table;
         }
 
-        private void Add(int subMeshIndex, int posA, int posB, int posC, int colA, int colB, int colC)
+        private Triangle Add(int subMeshIndex, int posA, int posB, int posC, int colA, int colB, int colC)
         {
             //Debug.Log($"{posA},{posB},{posC},{colA},{colB},{colC}");
             var tri = new Triangle(this, subMeshIndex, posA, posB, posC, colA, colB, colC);
@@ -248,6 +307,7 @@ namespace Yoji.Editor
                 if (!TrianglesWithEdge.ContainsKey(edgeHash)) TrianglesWithEdge[edgeHash] = new List<Triangle>();
                 TrianglesWithEdge[edgeHash].Add(tri);
             }
+            return tri;
         }
 
         private void Sort()
