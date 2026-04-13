@@ -63,16 +63,14 @@ namespace Yoji.Editor
             var constructor = new FrameConstructor();
             constructor.DestroyUselessWire = setting.DestroyUselessWire;
 
-            using (var providor = new TriangleProvidor(mesh))
+            var providor = new TriangleProvidor(mesh);
+            int count = 0;
+            foreach (var triangle in providor.AllTriangles)
             {
-                int count = 0;
-                foreach (var triangle in providor.AllTriangles)
-                {
-                    var smi = triangle.SubMeshIndex;
-                    //var priority = _convertSettings[smi].Priority;
-                    var priority = 0;
-                    count += constructor.AddTriangle(triangle, priority);
-                }
+                var smi = triangle.SubMeshIndex;
+                //var priority = _convertSettings[smi].Priority;
+                var priority = 0;
+                count += constructor.AddTriangle(triangle, priority);
             }
 
             using (var vb = constructor.ToVertexBuffer())
