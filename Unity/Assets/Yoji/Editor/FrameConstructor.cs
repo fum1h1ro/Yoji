@@ -52,6 +52,8 @@ namespace Yoji.Editor
             public Normal NormalB { get; private set; }
             public Color ColorA { get; }
             public Color ColorB { get; }
+            public BoneWeight BoneWeightsA { get; internal set; }
+            public BoneWeight BoneWeightsB { get; internal set; }
             public int Priority { get; }
             public bool NoSmooth { get; set; }
             public bool NoCull { get; set; }
@@ -88,7 +90,6 @@ namespace Yoji.Editor
             if (triangle.IsIndependent)
             {
                 var longestEdge = triangle.FindLongestEdge();
-                Debug.Log("ADD");
                 return AddWire(triangle, longestEdge, priority, true);
             }
             int count = 0;
@@ -110,8 +111,6 @@ namespace Yoji.Editor
             var otherNormal = (other != null)? other.FaceNormal : Vector3.zero;
             var colors = triangle.GetColors(edge);
 
-
-
             var selfSubMesh = triangle.SubMeshIndex;
             var otherSubMesh = (other == null)? -1 : other.SubMeshIndex;
             var otherIsFin = (other == null)? false : other.IsFin;
@@ -123,6 +122,11 @@ namespace Yoji.Editor
             var nmlA = new Normal(selfNormal);
             var nmlB = new Normal(otherNormal);
             var wire = new Wire(smi, vtxA, vtxB, nmlA, nmlB, colors.First, colors.Second, priority);
+            if (triangle.HasBoneWeights)
+            {
+                wire.BoneWeightsA = triangle.GetBoneWeight(edge.First);
+                wire.BoneWeightsB = triangle.GetBoneWeight(edge.Second);
+            }
             wire.NoCull = nocull;
             wire.NoSmooth = wire.NoFront = otherIsFin;
             //Debug.Log($"normal: {nmlA.Vector} {nmlB.Vector}");
