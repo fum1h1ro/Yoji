@@ -80,9 +80,11 @@ namespace Yoji.Editor
         private List<Wire> Wires = new List<Wire>();
         private Dictionary<EdgeID, int> WireMap = new Dictionary<EdgeID, int>();
         public bool DestroyUselessWire = true;
+        public bool HasWeights { get; private set; }
 
-        public FrameConstructor()
+        public FrameConstructor(bool hasWeights)
         {
+            HasWeights = hasWeights;
         }
 
         public int AddTriangle(Triangle triangle, int priority)
@@ -165,30 +167,63 @@ namespace Yoji.Editor
             return Wires.Count((w) => w.SubMeshIndex == submeshindex);
         }
 
-        public VertexBuffer ToVertexBuffer()
+        public IVertexBuffer ToVertexBuffer()
         {
             int nline = Wires.Count;
-            var vb = new VertexBuffer(nline);
-            for (int smi = 0; smi < SubMeshCount; ++smi)
+            if (!HasWeights)
             {
-                using (var sm = vb.CreateSubMesh())
+                var vb = new VertexBuffer(nline);
+                for (int smi = 0; smi < SubMeshCount; ++smi)
                 {
-                    foreach (var wire in Wires.Where(x => x.SubMeshIndex == smi))
+                    using (var sm = vb.CreateSubMesh())
                     {
-                        sm.AddLine(
-                            wire.VertexA.Position,
-                            wire.VertexB.Position,
-                            wire.NormalA.Vector,
-                            wire.NormalB.Vector,
-                            wire.ColorA,
-                            wire.ColorB,
-                            wire.NoSmooth,
-                            wire.NoCull,
-                            wire.NoFront);
+                        for (var i = 0; i < nline; ++i)
+                        {
+                            var wire = Wires[i];
+                            if (wire.SubMeshIndex != smi) continue;
+                            sm.AddLine(
+                                    wire.VertexA.Position,
+                                    wire.VertexB.Position,
+                                    wire.NormalA.Vector,
+                                    wire.NormalB.Vector,
+                                    wire.ColorA,
+                                    wire.ColorB,
+                                    wire.NoSmooth,
+                                    wire.NoCull,
+                                    wire.NoFront);
+                        }
                     }
                 }
+                return vb;
             }
-            return vb;
+            else
+            {
+                var vb = new VertexBufferSkinned(nline);
+                for (int smi = 0; smi < SubMeshCount; ++smi)
+                {
+                    using (var sm = vb.CreateSubMesh())
+                    {
+                        for (var i = 0; i < nline; ++i)
+                        {
+                            var wire = Wires[i];
+                            if (wire.SubMeshIndex != smi) continue;
+                            sm.AddLine(
+                                    wire.VertexA.Position,
+                                    wire.VertexB.Position,
+                                    wire.NormalA.Vector,
+                                    wire.NormalB.Vector,
+                                    wire.ColorA,
+                                    wire.ColorB,
+                                    wire.BoneWeightsA,
+                                    wire.BoneWeightsB,
+                                    wire.NoSmooth,
+                                    wire.NoCull,
+                                    wire.NoFront);
+                        }
+                    }
+                }
+                return vb;
+            }
         }
     }
 }

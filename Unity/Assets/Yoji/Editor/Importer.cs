@@ -14,6 +14,8 @@ namespace Yoji.Editor
     {
         private bool IsReadableBackup;
 
+        public override uint GetVersion() => 1;
+
         void OnPreprocessModel()
         {
             var modelImporter = (ModelImporter)assetImporter;
@@ -40,12 +42,12 @@ namespace Yoji.Editor
                 ModifyMeshRenderer(renderer);
                 if (renderer is SkinnedMeshRenderer skinnedMeshRenderer)
                 {
-                    ModifyMesh(skinnedMeshRenderer.sharedMesh, setting);
+                    ModifyMesh(skinnedMeshRenderer.sharedMesh, setting, true);
                 }
                 else
                 {
                     var meshFilter = renderer.gameObject.GetComponent<MeshFilter>();
-                    ModifyMesh(meshFilter.sharedMesh, setting);
+                    ModifyMesh(meshFilter.sharedMesh, setting, false);
                 }
                 ModifyMaterials(renderer.sharedMaterials, setting);
             }
@@ -58,9 +60,9 @@ namespace Yoji.Editor
             renderer.receiveShadows = false;
         }
 
-        private void ModifyMesh(Mesh mesh, ConvertSettings setting)
+        private void ModifyMesh(Mesh mesh, ConvertSettings setting, bool isSkinnedMesh)
         {
-            var constructor = new FrameConstructor();
+            var constructor = new FrameConstructor(isSkinnedMesh);
             constructor.DestroyUselessWire = setting.DestroyUselessWire;
 
             var providor = new TriangleProvidor(mesh);
@@ -73,10 +75,23 @@ namespace Yoji.Editor
                 count += constructor.AddTriangle(triangle, priority);
             }
 
-            using (var vb = constructor.ToVertexBuffer())
+            if (isSkinnedMesh)
             {
-                vb.ApplyToMesh(mesh);
-                mesh.RecalculateBounds();
+                using (var vb = constructor.ToVertexBuffer())
+                {
+                    var bindposes = mesh.bindposes;
+                    vb.ApplyToMesh(mesh);
+                    mesh.bindposes = bindposes;
+                    mesh.RecalculateBounds();
+                }
+            }
+            else
+            {
+                using (var vb = constructor.ToVertexBuffer())
+                {
+                    vb.ApplyToMesh(mesh);
+                    mesh.RecalculateBounds();
+                }
             }
         }
 
