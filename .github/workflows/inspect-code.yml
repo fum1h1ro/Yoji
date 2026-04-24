@@ -1,0 +1,21 @@
+name: InspectCode
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  inspect-code:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: JetBrains/ReSharper-InspectCode@v0.13
+        with:
+          solution: ./Unity.slnx
+          no-build: true
+          sEverity: WARNING
