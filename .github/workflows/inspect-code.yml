@@ -19,4 +19,5 @@ jobs:
         with:
           solution: ./Unity.slnx
           no-build: true
+          build: false
           sEverity: WARNING
