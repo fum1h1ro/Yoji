@@ -21,3 +21,4 @@ jobs:
           no-build: true
           build: false
           sEverity: WARNING
+          format: Text
