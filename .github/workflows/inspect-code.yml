@@ -23,6 +23,11 @@ jobs:
           restore-keys: |
             Library-
 
+      - name: build docker image
+        run: |
+          docker build -t my-image .
+          docker run --rm my-image
+
       - uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
