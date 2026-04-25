@@ -5,3 +5,7 @@ Unity/UserSettings
 Unity/Assets/SceneDependencyCache*
 .DS_Store
 .vscode
+*.sln
+*.slnx
+*.csproj
+obj/

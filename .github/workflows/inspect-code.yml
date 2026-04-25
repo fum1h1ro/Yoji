@@ -9,18 +9,40 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: write
       security-events: write
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: JetBrains/ReSharper-InspectCode@v0.13
+      - uses: actions/cache@v3
         with:
-          solution: ./Unity/Unity.slnx
+          path: ${{ matrix.projectPath }}/Library
+          key: Library-${{ matrix.projectPath }}
+          restore-keys: |
+            Library-
+
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: ./Unity
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: dump directory
+        run: ls Unity
+
+      - uses: JetBrains/ReSharper-InspectCode@v0.12
+        with:
+          solution: ./Unity/Unity.sln
           no-build: true
           build: false
           sEverity: WARNING
+          eXtensions: JetBrains.Unity;StyleCop.StyleCop
+          no-swea: true
           format: Text
           output: results.txt
 
