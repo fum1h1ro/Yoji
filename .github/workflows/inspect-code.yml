@@ -22,3 +22,7 @@ jobs:
           build: false
           sEverity: WARNING
           format: Text
+          output: results.txt
+
+      - name: cat results
+        run: cat results.txt
