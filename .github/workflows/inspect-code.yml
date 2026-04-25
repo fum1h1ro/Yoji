@@ -15,6 +15,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - uses: actions/cache@v3
+        with:
+          path: ${{ matrix.projectPath }}/Library
+          key: Library-${{ matrix.projectPath }}
+          restore-keys: |
+            Library-
+
       - uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -23,6 +31,10 @@ jobs:
         with:
           projectPath: ./Unity
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: dump directory
+        run: ls -R
+
       - uses: JetBrains/ReSharper-InspectCode@v0.13
         with:
           solution: ./Unity/Unity.slnx
