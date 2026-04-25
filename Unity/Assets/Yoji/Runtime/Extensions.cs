@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace Yoji.Extensions
+namespace Yoji.Runtime
 {
     public static class Extensions
     {

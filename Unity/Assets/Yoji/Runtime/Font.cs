@@ -14,13 +14,13 @@ namespace Yoji
         [System.Serializable]
         public struct FixedValue
         {
-            const int ShiftSize = 10;
-            const float Scale = (float)(1<<ShiftSize);
-            const float InverseScale = 1.0f / Scale;
+            private const int ShiftSize = 10;
+            private const float Scale = (float)(1<<ShiftSize);
+            private const float InverseScale = 1.0f / Scale;
             public static readonly FixedValue Zero = new FixedValue(0.0f);
             public static readonly FixedValue MinValue = new FixedValue(-32768);
             public static readonly FixedValue MaxValue = new FixedValue(32767);
-            [SerializeField] short _storage;
+            [SerializeField] private short _storage;
 
             public FixedValue(float v)
             {
@@ -49,8 +49,8 @@ namespace Yoji
         [System.Serializable]
         public struct Point
         {
-            [SerializeField] FixedValue _x;
-            [SerializeField] FixedValue _y;
+            [SerializeField] private FixedValue _x;
+            [SerializeField] private FixedValue _y;
 
             public Point(float x, float y)
             {
@@ -74,15 +74,15 @@ namespace Yoji
         [System.Serializable]
         public struct Table
         {
-            const int OffsetWidth = 24;
-            const int LengthWidth = 8;
-            const int OffsetShift = 0;
-            const int LengthShift = OffsetShift+OffsetWidth;
-            const uint OffsetMask = (uint)((1<<OffsetWidth)-1) << OffsetShift;
-            const uint LengthMask = (uint)((1<<LengthWidth)-1) << LengthShift;
-            [SerializeField] uint _offsetAndLength;
-            [SerializeField] FixedValue _left;
-            [SerializeField] FixedValue _right;
+            private const int OffsetWidth = 24;
+            private const int LengthWidth = 8;
+            private const int OffsetShift = 0;
+            private const int LengthShift = OffsetShift+OffsetWidth;
+            private const uint OffsetMask = (uint)((1<<OffsetWidth)-1) << OffsetShift;
+            private const uint LengthMask = (uint)((1<<LengthWidth)-1) << LengthShift;
+            [SerializeField] private uint _offsetAndLength;
+            [SerializeField] private FixedValue _left;
+            [SerializeField] private FixedValue _right;
 
             public Table(int offset, int length)
             {
@@ -127,40 +127,40 @@ namespace Yoji
             }
         }
 
-        [SerializeField] FixedValue _Bottom = FixedValue.MaxValue;
-        [SerializeField] FixedValue _Top = FixedValue.MinValue;
-        [SerializeField] Table[] _Tables;
-        [SerializeField] Point[] _Points;
-        List<Table> _TableWork;
-        List<Point> _PointWork;
+        [SerializeField] private FixedValue _bottom = FixedValue.MaxValue;
+        [SerializeField] private FixedValue _top = FixedValue.MinValue;
+        [SerializeField] private Table[] _tables;
+        [SerializeField] private Point[] _points;
+        private List<Table> _tableWork;
+        private List<Point> _pointWork;
 
 #if UNITY_EDITOR
         public void BeginEdit()
         {
-            Assert.IsNull(_TableWork);
-            Assert.IsNull(_PointWork);
-            _TableWork = (_Tables == null)? new List<Table>() : _Tables.ToList();
-            _PointWork = (_Points == null)? new List<Point>() : _Points.ToList();
+            Assert.IsNull(_tableWork);
+            Assert.IsNull(_pointWork);
+            _tableWork = (_tables == null)? new List<Table>() : _tables.ToList();
+            _pointWork = (_points == null)? new List<Point>() : _points.ToList();
         }
 
         public void EndEdit()
         {
-            Assert.IsNotNull(_TableWork);
-            Assert.IsNotNull(_PointWork);
-            _Tables = _TableWork.ToArray();
-            _Points = _PointWork.ToArray();
-            _TableWork = null;
-            _PointWork = null;
+            Assert.IsNotNull(_tableWork);
+            Assert.IsNotNull(_pointWork);
+            _tables = _tableWork.ToArray();
+            _points = _pointWork.ToArray();
+            _tableWork = null;
+            _pointWork = null;
         }
 
         public void SetTable(int code, int offset, int length)
         {
-            Assert.IsNotNull(_TableWork);
+            Assert.IsNotNull(_tableWork);
             Assert.IsTrue(0 <= code && code <= 0xffff);
 
-            while (_TableWork.Count <= code)
+            while (_tableWork.Count <= code)
             {
-                _TableWork.Add(new Table(0, 0));
+                _tableWork.Add(new Table(0, 0));
             }
 
             var table = new Table(offset, length);
@@ -168,45 +168,45 @@ namespace Yoji
             var right = float.MinValue;
             for (int i = 0; i < length; ++i)
             {
-                left = Mathf.Min(left, _PointWork[offset+i].x);
-                right = Mathf.Max(right, _PointWork[offset+i].x);
+                left = Mathf.Min(left, _pointWork[offset+i].x);
+                right = Mathf.Max(right, _pointWork[offset+i].x);
             }
 
             table.Left = 0.0f;
             table.Right = right - left;
 
-            _TableWork[code] = table;
+            _tableWork[code] = table;
 
             for (int i = 0; i < length; ++i)
             {
-                var pt = _PointWork[offset+i];
+                var pt = _pointWork[offset+i];
                 pt.x -= left;
-                _PointWork[offset+i] = pt;
+                _pointWork[offset+i] = pt;
             }
         }
 
         public void AddPoint(float x, float y)
         {
-            Assert.IsNotNull(_PointWork);
-            _PointWork.Add(new Point(x, y));
-            _Bottom.Value = Mathf.Min(_Bottom.Value, y);
-            _Top.Value = Mathf.Max(_Top.Value, y);
+            Assert.IsNotNull(_pointWork);
+            _pointWork.Add(new Point(x, y));
+            _bottom.Value = Mathf.Min(_bottom.Value, y);
+            _top.Value = Mathf.Max(_top.Value, y);
         }
 
         public int PointCount
         {
             get {
-                Assert.IsNotNull(_PointWork);
-                return _PointWork.Count;
+                Assert.IsNotNull(_pointWork);
+                return _pointWork.Count;
             }
         }
 #endif
-        public Table Get(char c) => _Tables[System.Convert.ToInt32(c)];
-        public Table Get(int code) => _Tables[code];
-        public Point[] Points => _Points;
-        public float Top => _Top.Value;
-        public float Bottom => _Bottom.Value;
-        public int Size => Mathf.CeilToInt(_Top.Value);
-        public float Height => _Top.Value - _Bottom.Value;
+        public Table Get(char c) => _tables[System.Convert.ToInt32(c)];
+        public Table Get(int code) => _tables[code];
+        public Point[] Points => _points;
+        public float Top => _top.Value;
+        public float Bottom => _bottom.Value;
+        public int Size => Mathf.CeilToInt(_top.Value);
+        public float Height => _top.Value - _bottom.Value;
     }
 }
