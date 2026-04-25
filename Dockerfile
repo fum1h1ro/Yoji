@@ -7,6 +7,6 @@ RUN apt-get update \
 
 RUN dotnet tool install -g JetBrains.ReSharper.GlobalTools
 
-FROM unityci/editor:ubuntu-6000.3.4-webgl-3.2.2
+FROM unityci/editor:ubuntu-6000.4.3f1-webgl-3.2.2
 
 RUN jb inspectcode Unity/Unity.sln --eXtensions=JetBrains.Unity --output=inspectcode.txt
