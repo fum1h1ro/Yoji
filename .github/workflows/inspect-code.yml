@@ -8,6 +8,7 @@ jobs:
   inspect-code:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     steps:
       - uses: actions/checkout@v4
@@ -16,6 +17,12 @@ jobs:
 
       - uses: JetBrains/ReSharper-InspectCode@v0.13
         with:
-          solution: ./Unity.slnx
+          solution: ./Unity/Unity.slnx
           no-build: true
+          build: false
           sEverity: WARNING
+          format: Text
+          output: results.txt
+
+      - name: cat results
+        run: cat results.txt
