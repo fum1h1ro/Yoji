@@ -17,7 +17,7 @@ jobs:
 
       - uses: JetBrains/ReSharper-InspectCode@v0.13
         with:
-          solution: ./Unity.slnx
+          solution: ./Unity/Unity.slnx
           no-build: true
           build: false
           sEverity: WARNING
