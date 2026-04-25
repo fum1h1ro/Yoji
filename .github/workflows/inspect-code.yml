@@ -33,7 +33,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: dump directory
-        run: ls -R
+        run: ls Unity
 
       - uses: JetBrains/ReSharper-InspectCode@v0.13
         with:
