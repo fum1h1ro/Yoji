@@ -41,6 +41,7 @@ jobs:
           no-build: true
           build: false
           sEverity: WARNING
+          eXtensions: JetBrains.Unity
           no-swea: true
           format: Text
           output: results.txt
