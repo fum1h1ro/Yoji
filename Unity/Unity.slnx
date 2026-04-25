@@ -1,0 +1,6 @@
+﻿<Solution>
+  <Project Path="Yoji.Runtime.csproj" />
+  <Project Path="Yoji.Runtime.UI.csproj" />
+  <Project Path="Yoji.Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+</Solution>
