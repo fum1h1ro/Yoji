@@ -35,7 +35,7 @@ jobs:
       - name: dump directory
         run: ls Unity
 
-      - uses: JetBrains/ReSharper-InspectCode@v0.13
+      - uses: JetBrains/ReSharper-InspectCode@v0.12
         with:
           solution: ./Unity/Unity.sln
           no-build: true
