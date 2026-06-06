@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Yoji.Runtime.UI
+namespace Yoji.UI
 {
     public class TextDrawer : WireGraphic
     {

@@ -3,42 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
-using Yoji.Runtime;
+using Yoji;
 
 namespace Yoji.Editor
 {
     public class FrameConstructor
     {
-        public class Vertex : IEquatable<Vertex>
-        {
-            public Vector3 Position { get; }
-
-            internal Vertex(Vector3 pos)
-            {
-                Position = pos;
-            }
-
-            public bool Equals(Vertex b)
-            {
-                return Position == b.Position;
-            }
-        }
-
-        public class Normal
-        {
-            public Vector3 Vector { get; private set; }
-
-            internal Normal(Vector3 vec)
-            {
-                Vector = vec;
-            }
-        }
-
         public class Wire
         {
             public int SubMeshIndex { get; }
-            public Vertex BeginPosition { get; }
-            public Vertex EndPosition { get; }
+            public Position BeginPosition { get; }
+            public Position EndPosition { get; }
             public Vector3 LeftPosition { get; }
             public Vector3 RightPosition { get; }
             public Normal NormalA { get; }
@@ -52,7 +27,7 @@ namespace Yoji.Editor
             public bool NoCull { get; set; }
             public bool NoFront { get; set; }
             //
-            public Wire(int subMeshIndex, Vertex vtxA, Vertex vtxB, Vector3 left, Vector3 right, Normal nmlA, Normal nmlB, Color colA, Color colB, int priority)
+            public Wire(int subMeshIndex, Position vtxA, Position vtxB, Vector3 left, Vector3 right, Normal nmlA, Normal nmlB, Color colA, Color colB, int priority)
             {
                 SubMeshIndex = subMeshIndex;
                 BeginPosition = vtxA;
@@ -126,8 +101,8 @@ namespace Yoji.Editor
 
             if (!nocull && DestroyUselessWire && selfNormal == otherNormal && selfSubMesh == otherSubMesh && !otherIsFin) return 0;
 
-            var vtxA = new Vertex(positions.First);
-            var vtxB = new Vertex(positions.Second);
+            var vtxA = new Position(positions.First);
+            var vtxB = new Position(positions.Second);
             var nmlA = new Normal(selfNormal);
             var nmlB = new Normal(otherNormal);
             var wire = new Wire(smi, vtxA, vtxB, left, Vector3.one, nmlA, nmlB, colors.First, colors.Second, priority);
@@ -138,7 +113,7 @@ namespace Yoji.Editor
             }
             wire.NoCull = nocull;
             wire.NoSmooth = wire.NoFront = otherIsFin;
-            //Debug.Log($"normal: {nmlA.Vector} {nmlB.Vector}");
+            //Debug.Log($"normal: {nmlA} {nmlB}");
             return AddWire(id, wire, priority, triangle.IsFin);
         }
 
@@ -161,7 +136,7 @@ namespace Yoji.Editor
                 {
                     Wires[existsWireIndex] = wire;
                 }
-                Debug.Log($"same {Wires[existsWireIndex].NormalA.Vector} {Wires[existsWireIndex].NormalB.Vector}");
+                Debug.Log($"same {Wires[existsWireIndex].NormalA} {Wires[existsWireIndex].NormalB}");
                 //Wires[existsWireIndex].AdjustNormal();
             }
             return 0;
@@ -187,10 +162,10 @@ namespace Yoji.Editor
                         var wire = Wires[i];
                         if (wire.SubMeshIndex != smi) continue;
                         sm.AddLine(
-                            wire.BeginPosition.Position,
-                            wire.EndPosition.Position,
-                            wire.NormalA.Vector,
-                            wire.NormalB.Vector,
+                            wire.BeginPosition,
+                            wire.EndPosition,
+                            wire.NormalA,
+                            wire.NormalB,
                             wire.BeginColor,
                             wire.EndColor,
                             wire.NoSmooth,
@@ -218,10 +193,10 @@ namespace Yoji.Editor
                             var wire = Wires[i];
                             if (wire.SubMeshIndex != smi) continue;
                             subMesh.AddLine(
-                                wire.BeginPosition.Position,
-                                wire.EndPosition.Position,
-                                wire.NormalA.Vector,
-                                wire.NormalB.Vector,
+                                wire.BeginPosition,
+                                wire.EndPosition,
+                                wire.NormalA,
+                                wire.NormalB,
                                 wire.BeginColor,
                                 wire.EndColor,
                                 wire.BeginBoneWeight,

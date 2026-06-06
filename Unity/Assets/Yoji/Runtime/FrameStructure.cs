@@ -8,7 +8,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 
 
-namespace Yoji.Runtime
+namespace Yoji
 {
     public class FrameStructure : ScriptableObject, ISerializationCallbackReceiver
     {

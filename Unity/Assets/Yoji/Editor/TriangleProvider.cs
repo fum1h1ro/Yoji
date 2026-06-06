@@ -73,13 +73,13 @@ namespace Yoji.Editor
     public class Triangle
     {
         public readonly int SubMeshIndex;
-        private readonly int[] PositionIndices = new int[TriangleVertex.Max];
-        private readonly Vector3[] Positions = new Vector3[TriangleVertex.Max];
-        private readonly Color32[] Colors = new Color32[TriangleVertex.Max];
+        private readonly Array3<int> _positionIndices;
+        private readonly Array3<Vector3> _positions;
+        private readonly Array3<Color32> _colors;
         private BoneWeight[] BoneWeights = null;
 
-        public int GetPositionIndex(TriangleVertex v) => PositionIndices[v];
-        public (int, int) GetPositionIndices(TriangleEdge e) => (PositionIndices[e.First], PositionIndices[e.Second]);
+        public int GetPositionIndex(TriangleVertex v) => _positionIndices[v];
+        public (int, int) GetPositionIndices(TriangleEdge e) => (_positionIndices[e.First], _positionIndices[e.Second]);
 
         public bool IsIndependent { get; internal set; }
         public bool IsFin { get; internal set; }
@@ -98,15 +98,9 @@ namespace Yoji.Editor
         )
         {
             SubMeshIndex = submesh;
-            PositionIndices[TriangleVertex.A] = posIndexA;
-            PositionIndices[TriangleVertex.B] = posIndexB;
-            PositionIndices[TriangleVertex.C] = posIndexC;
-            Positions[TriangleVertex.A] = posA;
-            Positions[TriangleVertex.B] = posB;
-            Positions[TriangleVertex.C] = posC;
-            Colors[TriangleVertex.A] = colA;
-            Colors[TriangleVertex.B] = colB;
-            Colors[TriangleVertex.C] = colC;
+            _positionIndices = new(posIndexA, posIndexB, posIndexC);
+            _positions = new(posA, posB, posC);
+            _colors = new(colA, colB, colC);
         }
 
         internal void AddBoneWeights(BoneWeight wgtA, BoneWeight wgtB, BoneWeight wgtC)
@@ -118,9 +112,9 @@ namespace Yoji.Editor
             BoneWeights[TriangleVertex.C] = wgtC;
         }
 
-        public Vector3 GetPosition(TriangleVertex v) => Positions[v];
+        public Vector3 GetPosition(TriangleVertex v) => _positions[v];
         public (Vector3 First, Vector3 Second) GetPositions(TriangleEdge e) => (GetPosition(e.First), GetPosition(e.Second));
-        public Color GetColor(TriangleVertex v) => Colors[v];
+        public Color GetColor(TriangleVertex v) => _colors[v];
         public (Color First, Color Second) GetColors(TriangleEdge e) => (GetColor(e.First), GetColor(e.Second));
         public bool HasBoneWeights => BoneWeights != null;
         public BoneWeight GetBoneWeight(TriangleVertex v)

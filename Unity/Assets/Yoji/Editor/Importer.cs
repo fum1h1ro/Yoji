@@ -7,8 +7,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Assertions;
 using UnityEditor;
 using UnityEditor.Experimental.AssetImporters;
-using Yoji.Runtime;
-using Yoji.Runtime.Components;
+using Yoji;
+using Yoji.Components;
 
 namespace Yoji.Editor
 {

@@ -9,7 +9,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Pool;
 
-namespace Yoji.Runtime
+namespace Yoji
 {
     public class VertexBuffer : IDisposable
     {

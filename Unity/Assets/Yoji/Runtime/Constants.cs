@@ -1,4 +1,4 @@
-namespace Yoji.Runtime
+namespace Yoji
 {
     [System.Flags]
     public enum LineFlag
