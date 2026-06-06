@@ -136,11 +136,11 @@ namespace Yoji.Editor
             return (TriangleEdge)((TriangleVertex)Array.FindIndex(edgeLengths, (len) => len == edgeLengths.Max()));
         }
 
-        public Vector3 FaceNormal =>
-            Vector3.Cross(
+        public Normal FaceNormal =>
+            new Normal(Vector3.Cross(
                 ((Vector3)GetPosition(TriangleVertex.A) - (Vector3)GetPosition(TriangleVertex.B)).normalized,
                 ((Vector3)GetPosition(TriangleVertex.A) - (Vector3)GetPosition(TriangleVertex.C)).normalized
-            ).normalized;
+            ).normalized);
 
         public TriangleEdgeId GetEdgeID(TriangleEdge e) => new TriangleEdgeId(GetPositionIndex(e.First), GetPositionIndex(e.Second));
 
@@ -163,7 +163,6 @@ namespace Yoji.Editor
     public class TriangleProvider
     {
         private List<Triangle> _triangles = new List<Triangle>();
-        //private Dictionary<int, List<Triangle>> _trianglesWithSubmesh = new Dictionary<int, List<Triangle>>();
         private Dictionary<TriangleEdgeId, List<Triangle>> _trianglesWithEdge = new Dictionary<TriangleEdgeId, List<Triangle>>();
         private List<Vector3> _positions = new List<Vector3>();
         private List<Color> _colors = new List<Color>();
@@ -244,12 +243,6 @@ namespace Yoji.Editor
             }
             _triangles.Add(tri);
 
-            //if (!_trianglesWithSubmesh.ContainsKey(subMeshIndex))
-            //{
-            //    _trianglesWithSubmesh[subMeshIndex] = new List<Triangle>();
-            //}
-            //_trianglesWithSubmesh[subMeshIndex].Add(tri);
-
             foreach (var edge in TriangleEdge.Values)
             {
                 var edgeHash = tri.GetEdgeID(edge);
@@ -307,11 +300,7 @@ namespace Yoji.Editor
             }
         }
 
-        public IReadOnlyList<Vector3> PositionArray => _positions;
-        public IReadOnlyList<Color> ColorArray => _colors;
-        public IReadOnlyList<BoneWeight> BoneWeightArray => _boneWeights;
         public IReadOnlyList<Triangle> AllTriangles => _triangles;
-        //public IReadOnlyList<Triangle> GetTriangles(int subMeshIndex) => _trianglesWithSubmesh[subMeshIndex];
         public bool HasColor => _colors.Count > 0;
         public bool HasBoneWeights => _boneWeights.Count > 0;
 
@@ -325,11 +314,6 @@ namespace Yoji.Editor
         {
             if (!_trianglesWithEdge.ContainsKey(id)) return new List<Triangle>(); // empty
             return _trianglesWithEdge[id];
-        }
-
-        public List<Triangle> EnumerateTrianglesWithEdge(int a, int b)
-        {
-            return EnumerateTrianglesWithEdgeID(new TriangleEdgeId(a, b));
         }
 
         // TriangleEdgeを共有している三角形

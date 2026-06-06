@@ -88,11 +88,11 @@ namespace Yoji.Editor
 
             var left = triangle.GetPosition(edge.Next.First);
 
-            var selfNormal = (nocull)? Vector3.zero : triangle.FaceNormal;
+            var selfNormal = (nocull)? Normal.Invalid : triangle.FaceNormal;
             var other = _provider.FindAdjacentTriangle(triangle, edge);
             if (!nocull && other == null) return 0;
             //var right = other
-            var otherNormal = (other != null)? other.FaceNormal : Vector3.zero;
+            var otherNormal = (other != null)? other.FaceNormal : Normal.Invalid;
             var colors = triangle.GetColors(edge);
 
             var selfSubMesh = triangle.SubMeshIndex;
@@ -103,8 +103,8 @@ namespace Yoji.Editor
 
             var vtxA = positions.First;
             var vtxB = positions.Second;
-            var nmlA = new Normal(selfNormal);
-            var nmlB = new Normal(otherNormal);
+            var nmlA = selfNormal;
+            var nmlB = otherNormal;
             var wire = new Wire(smi, vtxA, vtxB, (Vector3)left, Vector3.one, nmlA, nmlB, colors.First, colors.Second, priority);
             if (triangle.HasBoneWeights)
             {

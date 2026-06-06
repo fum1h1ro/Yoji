@@ -46,11 +46,14 @@ namespace Yoji
         {
             return _value == b._value;
         }
+        public static bool operator ==(Position a, Position b) => a._value == b._value;
+        public static bool operator !=(Position a, Position b) => a._value != b._value;
     }
 
-    public struct Normal
+    public struct Normal : IEquatable<Normal>
     {
         private readonly Vector3 _value;
+        public static readonly Normal Invalid = new Normal(Vector3.zero);
 
         public Normal(Vector3 vec)
         {
@@ -61,6 +64,13 @@ namespace Yoji
         {
             return nml._value;
         }
+
+        public bool Equals(Normal b)
+        {
+            return _value == b._value;
+        }
+        public static bool operator ==(Normal a, Normal b) => a._value == b._value;
+        public static bool operator !=(Normal a, Normal b) => a._value != b._value;
     }
 
     public struct Array3<T>
