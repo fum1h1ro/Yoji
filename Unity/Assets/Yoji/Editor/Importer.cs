@@ -63,8 +63,8 @@ namespace Yoji.Editor
 
         private void ConvertSkinnedMesh(SkinnedMeshRenderer renderer, Mesh mesh, ConvertSettings setting)
         {
-            var providor = new TriangleProvidor(mesh);
-            var constructor = new FrameConstructor(providor);
+            var provider = new TriangleProvider(mesh);
+            var constructor = new FrameConstructor(provider);
             constructor.DestroyUselessWire = setting.DestroyUselessWire;
             constructor.Construct();
 
@@ -92,8 +92,8 @@ namespace Yoji.Editor
 
         private void ModifyMesh(MeshRenderer renderer, Mesh mesh, ConvertSettings setting)
         {
-            var providor = new TriangleProvidor(mesh);
-            var constructor = new FrameConstructor(providor);
+            var provider = new TriangleProvider(mesh);
+            var constructor = new FrameConstructor(provider);
             constructor.DestroyUselessWire = setting.DestroyUselessWire;
             constructor.Construct();
 

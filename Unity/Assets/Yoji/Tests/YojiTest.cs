@@ -57,7 +57,7 @@ namespace Yoji.Tests
 			Assert.AreEqual(mask, m);
 		}
 	}
-	public class TriangleProvidorTest
+	public class TriangleProviderTest
     {
 		[Test]
 		public void VertexTest()

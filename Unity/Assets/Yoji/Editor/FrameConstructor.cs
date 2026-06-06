@@ -72,12 +72,12 @@ namespace Yoji.Editor
             }
         }
 
-        private readonly TriangleProvidor _provider;
+        private readonly TriangleProvider _provider;
         private List<Wire> Wires = new List<Wire>();
         private Dictionary<TriangleEdgeId, int> WireMap = new Dictionary<TriangleEdgeId, int>();
         public bool DestroyUselessWire = true;
 
-        public FrameConstructor(TriangleProvidor provider)
+        public FrameConstructor(TriangleProvider provider)
         {
             _provider = provider;
         }

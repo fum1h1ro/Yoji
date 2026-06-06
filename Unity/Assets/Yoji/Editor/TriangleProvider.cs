@@ -101,9 +101,9 @@ namespace Yoji.Editor
             PositionIndices[TriangleVertex.A] = posIndexA;
             PositionIndices[TriangleVertex.B] = posIndexB;
             PositionIndices[TriangleVertex.C] = posIndexC;
-            Positions[TriangleVertex.A] = posA;//_providor.PositionArray[posIndexA];
-            Positions[TriangleVertex.B] = posB;//_providor.PositionArray[posIndexB];
-            Positions[TriangleVertex.C] = posC;//_providor.PositionArray[posIndexC];
+            Positions[TriangleVertex.A] = posA;
+            Positions[TriangleVertex.B] = posB;
+            Positions[TriangleVertex.C] = posC;
             Colors[TriangleVertex.A] = colA;
             Colors[TriangleVertex.B] = colB;
             Colors[TriangleVertex.C] = colC;
@@ -164,7 +164,7 @@ namespace Yoji.Editor
         }
     }
 
-    public class TriangleProvidor
+    public class TriangleProvider
     {
         private List<Triangle> Triangles = new List<Triangle>();
         private Dictionary<int, List<Triangle>> TrianglesWithSubmesh = new Dictionary<int, List<Triangle>>();
@@ -173,7 +173,7 @@ namespace Yoji.Editor
         private List<Color> Colors = new List<Color>();
         private List<BoneWeight> BoneWeights = new List<BoneWeight>();
 
-        public TriangleProvidor(Mesh mesh)
+        public TriangleProvider(Mesh mesh)
         {
             mesh.GetVertices(Positions);
             mesh.GetColors(Colors);
@@ -346,7 +346,7 @@ namespace Yoji.Editor
         public new string ToString()
         {
             var sb = new System.Text.StringBuilder();
-            sb.Append($"TriangleProvidor:{GetHashCode()}\n");
+            sb.Append($"TriangleProvider:{GetHashCode()}\n");
             sb.Append($"  AllTriangles:{AllTriangles.Count}\n");
             foreach (var t in AllTriangles) {
                 sb.Append(t.ToString());
