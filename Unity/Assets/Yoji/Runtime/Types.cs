@@ -48,6 +48,8 @@ namespace Yoji
         }
         public static bool operator ==(Position a, Position b) => a._value == b._value;
         public static bool operator !=(Position a, Position b) => a._value != b._value;
+        public override bool Equals(object obj) => obj is Position position && Equals(position);
+        public override int GetHashCode() => _value.GetHashCode();
     }
 
     public struct Normal : IEquatable<Normal>
@@ -71,6 +73,8 @@ namespace Yoji
         }
         public static bool operator ==(Normal a, Normal b) => a._value == b._value;
         public static bool operator !=(Normal a, Normal b) => a._value != b._value;
+        public override bool Equals(object obj) => obj is Normal normal && Equals(normal);
+        public override int GetHashCode() => _value.GetHashCode();
     }
 
     public struct Array3<T>
@@ -84,22 +88,6 @@ namespace Yoji
             _a = a;
             _b = b;
             _c = c;
-        }
-
-        public T x
-        {
-            get => _a;
-            set => _a = value;
-        }
-        public T y
-        {
-            get => _b;
-            set => _b = value;
-        }
-        public T z
-        {
-            get => _c;
-            set => _c = value;
         }
 
         public T this[int index]
