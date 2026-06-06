@@ -1,4 +1,3 @@
-#nullable enable
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -16,10 +15,10 @@ namespace Yoji.UI
         protected static Material SharedMaterial = null;
         protected Mesh WorkMesh;
 
-        protected RectTransform? RectTransform;
-        protected VertexBuffer? VertexBuffer;
-        protected MeshFilter? MeshFilter;
-        protected MeshRenderer? MeshRenderer;
+        protected RectTransform RectTransform;
+        protected VertexBuffer VertexBuffer;
+        protected MeshFilter MeshFilter;
+        protected MeshRenderer MeshRenderer;
         protected Mesh Mesh => WorkMesh ?? (WorkMesh = new Mesh());
 
 #if UNITY_EDITOR
