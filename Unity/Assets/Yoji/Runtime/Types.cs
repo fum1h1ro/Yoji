@@ -37,7 +37,7 @@ namespace Yoji
             _value = pos;
         }
 
-        public static implicit operator Vector3(Position pos)
+        public static explicit operator Vector3(Position pos)
         {
             return pos._value;
         }
@@ -57,7 +57,7 @@ namespace Yoji
             _value = vec;
         }
 
-        public static implicit operator Vector3(Normal nml)
+        public static explicit operator Vector3(Normal nml)
         {
             return nml._value;
         }

@@ -48,7 +48,7 @@ namespace Yoji.Components
             _mesh.MarkDynamic();
             _meshFilter.sharedMesh = _mesh;
 
-            SetupFrameStructure();
+            if (FrameStructure != null) SetupFrameStructure();
 #if UNITY_EDITOR
             UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
             UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
@@ -86,6 +86,7 @@ namespace Yoji.Components
             if (FrameStructure == null) return;
             if (FrameStructure != _oldFrameStructure)
             {
+                if (_oldFrameStructure != null) Destroy(_oldFrameStructure);
                 SetupFrameStructure();
                 _oldFrameStructure = FrameStructure;
             }
@@ -95,6 +96,7 @@ namespace Yoji.Components
 
         private void SetupFrameStructure()
         {
+            FrameStructure.PrepareForRuntime();
             var nline = FrameStructure.LineCount;
             if (_vertexBuffer != null) _vertexBuffer.Dispose();
             _vertexBuffer = new VertexBuffer(nline);

@@ -38,10 +38,10 @@ namespace Yoji
         [StructLayout(LayoutKind.Sequential)]
         public struct Line
         {
-            public Vector3 BeginPos;
-            public Vector3 EndPos;
-            public Vector3 Normal0;
-            public Vector3 Normal1;
+            public float3 BeginPos;
+            public float3 EndPos;
+            public float3 Normal0;
+            public float3 Normal1;
             public Color32 BeginColor;
             public Color32 EndColor;
             public WeightsAndIndices BeginWeight;
@@ -140,7 +140,6 @@ namespace Yoji
 
         private void OnEnable()
         {
-            ArrayToNative();
         }
 
         private void OnDisable()
@@ -182,6 +181,11 @@ namespace Yoji
             if (_nativeLines.IsCreated) _nativeLines.Dispose();
             if (_nativeBindPoses.IsCreated) _nativeBindPoses.Dispose();
             _subMeshes.Clear();
+        }
+
+        public void PrepareForRuntime()
+        {
+            ArrayToNative();
         }
 
         internal void AddLine(
@@ -263,6 +267,7 @@ namespace Yoji
         {
             if (_nativeLines.IsCreated) _nativeLines.Dispose();
             if (_nativeBindPoses.IsCreated) _nativeBindPoses.Dispose();
+            Assert.IsNotNull(Lines);
             _nativeLines = new NativeArray<Line>(Lines, Allocator.Persistent);
             _nativeBindPoses = new NativeArray<float4x4>(BindPoses.Length, Allocator.Persistent);
             for (var i = 0; i < BindPoses.Length; ++i)

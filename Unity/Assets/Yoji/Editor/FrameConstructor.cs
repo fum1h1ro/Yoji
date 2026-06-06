@@ -48,8 +48,8 @@ namespace Yoji.Editor
         }
 
         private readonly TriangleProvider _provider;
-        private List<Wire> Wires = new List<Wire>();
-        private Dictionary<TriangleEdgeId, int> WireMap = new Dictionary<TriangleEdgeId, int>();
+        private List<Wire> _wires = new List<Wire>();
+        private Dictionary<TriangleEdgeId, int> _wireMap = new Dictionary<TriangleEdgeId, int>();
         public bool DestroyUselessWire = true;
 
         public FrameConstructor(TriangleProvider provider)
@@ -101,11 +101,11 @@ namespace Yoji.Editor
 
             if (!nocull && DestroyUselessWire && selfNormal == otherNormal && selfSubMesh == otherSubMesh && !otherIsFin) return 0;
 
-            var vtxA = new Position(positions.First);
-            var vtxB = new Position(positions.Second);
+            var vtxA = positions.First;
+            var vtxB = positions.Second;
             var nmlA = new Normal(selfNormal);
             var nmlB = new Normal(otherNormal);
-            var wire = new Wire(smi, vtxA, vtxB, left, Vector3.one, nmlA, nmlB, colors.First, colors.Second, priority);
+            var wire = new Wire(smi, vtxA, vtxB, (Vector3)left, Vector3.one, nmlA, nmlB, colors.First, colors.Second, priority);
             if (triangle.HasBoneWeights)
             {
                 wire.BeginBoneWeight = triangle.GetBoneWeight(edge.First);
@@ -119,39 +119,39 @@ namespace Yoji.Editor
 
         private int AddWire(TriangleEdgeId id, Wire wire, int priority, bool isFin)
         {
-            if (!WireMap.ContainsKey(id))
+            if (!_wireMap.ContainsKey(id))
             {
-                WireMap[id] = Wires.Count;
-                Wires.Add(wire);
+                _wireMap[id] = _wires.Count;
+                _wires.Add(wire);
                 return 1;
             }
             //
-            var existsWireIndex = WireMap[id];
-            var existsWire = Wires[existsWireIndex];
+            var existsWireIndex = _wireMap[id];
+            var existsWire = _wires[existsWireIndex];
             if (existsWire.SubMeshIndex != wire.SubMeshIndex)// || isFin)
             {
                 existsWire.NoSmooth = wire.NoSmooth = true;
                 existsWire.NoFront = wire.NoFront = true;
                 if (existsWire.Priority < priority)
                 {
-                    Wires[existsWireIndex] = wire;
+                    _wires[existsWireIndex] = wire;
                 }
-                Debug.Log($"same {Wires[existsWireIndex].NormalA} {Wires[existsWireIndex].NormalB}");
-                //Wires[existsWireIndex].AdjustNormal();
+                Debug.Log($"same {_wires[existsWireIndex].NormalA} {_wires[existsWireIndex].NormalB}");
+                //_wires[existsWireIndex].AdjustNormal();
             }
             return 0;
         }
 
-        public int SubMeshCount { get => (Wires.Count == 0)? 1 : Wires.Max((w) => w.SubMeshIndex) + 1; }
+        public int SubMeshCount { get => (_wires.Count == 0)? 1 : _wires.Max((w) => w.SubMeshIndex) + 1; }
 
         public int CountWireBySubMesh(int submeshindex)
         {
-            return Wires.Count((w) => w.SubMeshIndex == submeshindex);
+            return _wires.Count((w) => w.SubMeshIndex == submeshindex);
         }
 
         public VertexBuffer ToVertexBuffer()
         {
-            int nline = Wires.Count;
+            int nline = _wires.Count;
             var vb = new VertexBuffer(nline);
             for (int smi = 0; smi < SubMeshCount; ++smi)
             {
@@ -159,13 +159,13 @@ namespace Yoji.Editor
                 {
                     for (var i = 0; i < nline; ++i)
                     {
-                        var wire = Wires[i];
+                        var wire = _wires[i];
                         if (wire.SubMeshIndex != smi) continue;
                         sm.AddLine(
-                            wire.BeginPosition,
-                            wire.EndPosition,
-                            wire.NormalA,
-                            wire.NormalB,
+                            (Vector3)wire.BeginPosition,
+                            (Vector3)wire.EndPosition,
+                            (Vector3)wire.NormalA,
+                            (Vector3)wire.NormalB,
                             wire.BeginColor,
                             wire.EndColor,
                             wire.NoSmooth,
@@ -180,7 +180,7 @@ namespace Yoji.Editor
 
         public FrameStructure ToFrameStructure()
         {
-            int nline = Wires.Count;
+            int nline = _wires.Count;
             var fs = ScriptableObject.CreateInstance<FrameStructure>();
             using (var editor = fs.BeginEdit())
             {
@@ -190,13 +190,13 @@ namespace Yoji.Editor
                     {
                         for (var i = 0; i < nline; ++i)
                         {
-                            var wire = Wires[i];
+                            var wire = _wires[i];
                             if (wire.SubMeshIndex != smi) continue;
                             subMesh.AddLine(
-                                wire.BeginPosition,
-                                wire.EndPosition,
-                                wire.NormalA,
-                                wire.NormalB,
+                                (Vector3)wire.BeginPosition,
+                                (Vector3)wire.EndPosition,
+                                (Vector3)wire.NormalA,
+                                (Vector3)wire.NormalB,
                                 wire.BeginColor,
                                 wire.EndColor,
                                 wire.BeginBoneWeight,
