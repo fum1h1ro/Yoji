@@ -99,7 +99,13 @@ namespace Yoji.Editor
             var otherSubMesh = (other == null)? -1 : other.SubMeshIndex;
             var otherIsFin = (other == null)? false : other.IsFin;
 
-            if (!nocull && DestroyUselessWire && selfNormal == otherNormal && selfSubMesh == otherSubMesh && !otherIsFin) return 0;
+            if (
+                !nocull &&
+                DestroyUselessWire &&
+                selfNormal == otherNormal &&
+                selfSubMesh == otherSubMesh &&
+                !otherIsFin
+            ) return 0;
 
             var vtxA = positions.First;
             var vtxB = positions.Second;

@@ -50,6 +50,7 @@ namespace Yoji
         public static bool operator !=(Position a, Position b) => a._value != b._value;
         public override bool Equals(object obj) => obj is Position position && Equals(position);
         public override int GetHashCode() => _value.GetHashCode();
+        public override string ToString() => _value.ToString();
     }
 
     public struct Normal : IEquatable<Normal>
@@ -75,6 +76,7 @@ namespace Yoji
         public static bool operator !=(Normal a, Normal b) => a._value != b._value;
         public override bool Equals(object obj) => obj is Normal normal && Equals(normal);
         public override int GetHashCode() => _value.GetHashCode();
+        public override string ToString() => _value.ToString();
     }
 
     public struct Array3<T>
