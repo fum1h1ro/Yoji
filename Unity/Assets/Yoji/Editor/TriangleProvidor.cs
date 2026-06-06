@@ -3,206 +3,172 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Unity.Mathematics;
 
 namespace Yoji.Editor
 {
+    public struct TriangleVertex
+    {
+        private int _value;
+
+        private TriangleVertex(int v)
+        {
+            while (v < 0) v += Max;
+            _value = v % Max;
+        }
+
+        public static readonly TriangleVertex A = new TriangleVertex(0);
+        public static readonly TriangleVertex B = new TriangleVertex(1);
+        public static readonly TriangleVertex C = new TriangleVertex(2);
+        public static readonly TriangleVertex[] Values = new TriangleVertex[]{ TriangleVertex.A, TriangleVertex.B, TriangleVertex.C };
+        public const int Max = 3;
+
+        public TriangleVertex Add(int offset) => new TriangleVertex(_value + offset);
+        public TriangleVertex Next => Add(1);
+
+        public static explicit operator TriangleVertex(int i) => new TriangleVertex(i);
+        public static implicit operator int(TriangleVertex v) => v._value;
+    }
+
+    public struct TriangleEdge
+    {
+        private int _value;
+
+        private TriangleEdge(TriangleVertex a, TriangleVertex b)
+        {
+            _value = ((a & 0xff) << 16) | (b & 0xff);
+        }
+
+        public static readonly TriangleEdge AB = new TriangleEdge(TriangleVertex.A, TriangleVertex.B);
+        public static readonly TriangleEdge BC = new TriangleEdge(TriangleVertex.B, TriangleVertex.C);
+        public static readonly TriangleEdge CA = new TriangleEdge(TriangleVertex.C, TriangleVertex.A);
+        public static readonly TriangleEdge[] Values = new TriangleEdge[]{ TriangleEdge.AB, TriangleEdge.BC, TriangleEdge.CA };
+        public const int Max = 3;
+
+        public TriangleVertex First => (TriangleVertex)((_value >> 16) & 0xff);
+        public TriangleVertex Second => (TriangleVertex)(_value & 0xff);
+        public TriangleEdge Next => (TriangleEdge)Second;
+
+        public static explicit operator TriangleEdge(TriangleVertex v) => new TriangleEdge(v, v.Next);
+    }
+
+    public struct TriangleEdgeId
+    {
+        public readonly long Value;
+
+        public TriangleEdgeId(int a, int b)
+        {
+            if (a < b)
+                Value = MakeId(a, b);
+            else
+                Value = MakeId(b, a);
+        }
+
+        public int First => (int)((Value & 0x7fffffff00000000) >> 32);
+        public int Second => (int)(Value & 0x000000007fffffff);
+        private static long MakeId(int a, int b) => ((long)a << 32) | (long)b;
+        public override string ToString() => $"TriangleEdgeId:({First}, {Second})";
+    }
+
+    public class Triangle
+    {
+        public readonly int SubMeshIndex;
+        private readonly int[] PositionIndices = new int[TriangleVertex.Max];
+        private readonly Vector3[] Positions = new Vector3[TriangleVertex.Max];
+        private readonly Color32[] Colors = new Color32[TriangleVertex.Max];
+        private BoneWeight[] BoneWeights = null;
+
+        public int GetPositionIndex(TriangleVertex v) => PositionIndices[v];
+        public (int, int) GetPositionIndices(TriangleEdge e) => (PositionIndices[e.First], PositionIndices[e.Second]);
+
+        public bool IsIndependent { get; internal set; }
+        public bool IsFin { get; internal set; }
+
+        internal Triangle(
+            int submesh,
+            int posIndexA,
+            int posIndexB,
+            int posIndexC,
+            Vector3 posA,
+            Vector3 posB,
+            Vector3 posC,
+            Color32 colA,
+            Color32 colB,
+            Color32 colC
+        )
+        {
+            SubMeshIndex = submesh;
+            PositionIndices[TriangleVertex.A] = posIndexA;
+            PositionIndices[TriangleVertex.B] = posIndexB;
+            PositionIndices[TriangleVertex.C] = posIndexC;
+            Positions[TriangleVertex.A] = posA;//_providor.PositionArray[posIndexA];
+            Positions[TriangleVertex.B] = posB;//_providor.PositionArray[posIndexB];
+            Positions[TriangleVertex.C] = posC;//_providor.PositionArray[posIndexC];
+            Colors[TriangleVertex.A] = colA;
+            Colors[TriangleVertex.B] = colB;
+            Colors[TriangleVertex.C] = colC;
+        }
+
+        internal void AddBoneWeights(BoneWeight wgtA, BoneWeight wgtB, BoneWeight wgtC)
+        {
+            Assert.IsNull(BoneWeights);
+            BoneWeights = new BoneWeight[TriangleVertex.Max];
+            BoneWeights[TriangleVertex.A] = wgtA;
+            BoneWeights[TriangleVertex.B] = wgtB;
+            BoneWeights[TriangleVertex.C] = wgtC;
+        }
+
+        public Vector3 GetPosition(TriangleVertex v) => Positions[v];
+        public (Vector3 First, Vector3 Second) GetPositions(TriangleEdge e) => (GetPosition(e.First), GetPosition(e.Second));
+        public Color GetColor(TriangleVertex v) => Colors[v];
+        public (Color First, Color Second) GetColors(TriangleEdge e) => (GetColor(e.First), GetColor(e.Second));
+        public bool HasBoneWeights => BoneWeights != null;
+        public BoneWeight GetBoneWeight(TriangleVertex v)
+        {
+            Assert.IsTrue(HasBoneWeights);
+            return BoneWeights[v];
+        }
+        public (BoneWeight First, BoneWeight Second) GetBoneWeights(TriangleEdge e) => (GetBoneWeight(e.First), GetBoneWeight(e.Second));
+
+        public float CalculateEdgeLength(TriangleEdge e)
+        {
+            var positions = GetPositions(e);
+            return Vector3.Distance(positions.First, positions.Second);
+        }
+
+        public float[] CalculateEdgeLengths() => new float[]{ CalculateEdgeLength(TriangleEdge.AB), CalculateEdgeLength(TriangleEdge.BC), CalculateEdgeLength(TriangleEdge.CA) };
+
+        public TriangleEdge FindLongestEdge()
+        {
+            var edgeLengths = CalculateEdgeLengths();
+            return (TriangleEdge)((TriangleVertex)Array.FindIndex(edgeLengths, (len) => len == edgeLengths.Max()));
+        }
+
+        public Vector3 FaceNormal => Vector3.Cross((GetPosition(TriangleVertex.A) - GetPosition(TriangleVertex.B)).normalized, (GetPosition(TriangleVertex.A) - GetPosition(TriangleVertex.C)).normalized).normalized;
+
+        public TriangleEdgeId GetEdgeID(TriangleEdge e) => new TriangleEdgeId(GetPositionIndex(e.First), GetPositionIndex(e.Second));
+
+        public new string ToString()
+        {
+            return
+                $"Index: {GetPositionIndex(TriangleVertex.A)}, {GetPositionIndex(TriangleVertex.B)}, {GetPositionIndex(TriangleVertex.C)}\n" +
+                $"Position: {GetPosition(TriangleVertex.A)}, {GetPosition(TriangleVertex.B)}, {GetPosition(TriangleVertex.C)}\n" +
+                $"Color: {GetColor(TriangleVertex.A)}, {GetColor(TriangleVertex.B)}, {GetColor(TriangleVertex.C)}\n" +
+                $"BoneWeights: {(HasBoneWeights? $"{GetBoneWeight(TriangleVertex.A)}, {GetBoneWeight(TriangleVertex.B)}, {GetBoneWeight(TriangleVertex.C)}" : "None")}\n" +
+                $"Normal: {FaceNormal}\n" +
+                $"Longest: {FindLongestEdge()}: {CalculateEdgeLengths()[FindLongestEdge().First]}\n" +
+                $"TriangleEdgeId: {GetEdgeID(TriangleEdge.AB)}-{GetEdgeID(TriangleEdge.BC)}-{GetEdgeID(TriangleEdge.CA)}\n" +
+                $"SubMeshIndex: {SubMeshIndex}\n" +
+                $"IsIndependent: {IsIndependent}\n" +
+                $"IsFin: {IsFin}\n";
+        }
+    }
+
     public class TriangleProvidor
     {
-        public struct Vertex
-        {
-            private int Value;
-
-            private Vertex(int v)
-            {
-                while (v < 0) v += Max;
-                Value = v % Max;
-            }
-
-            public static readonly Vertex A = new Vertex(0);
-            public static readonly Vertex B = new Vertex(1);
-            public static readonly Vertex C = new Vertex(2);
-            public static readonly Vertex[] Values = new Vertex[]{ Vertex.A, Vertex.B, Vertex.C };
-            public const int Max = 3;
-
-            public Vertex Add(int offset) => (Vertex)(Value + offset);
-            public Vertex Next => Add(1);
-
-            public static explicit operator Vertex(int i) => new Vertex(i);
-            public static implicit operator int(Vertex v) => v.Value;
-        }
-
-        public struct Edge
-        {
-            private int Value;
-
-            private Edge(Vertex a, Vertex b)
-            {
-                Value = ((a & 0xff) << 16) | (b & 0xff);
-            }
-
-            public static readonly Edge AB = new Edge(Vertex.A, Vertex.B);
-            public static readonly Edge BC = new Edge(Vertex.B, Vertex.C);
-            public static readonly Edge CA = new Edge(Vertex.C, Vertex.A);
-            public static readonly Edge[] Values = new Edge[]{ Edge.AB, Edge.BC, Edge.CA };
-            public const int Max = 3;
-
-            public Vertex First => (Vertex)((Value >> 16) & 0xff);
-            public Vertex Second => (Vertex)(Value & 0xff);
-            public Edge Next => (Edge)Second;
-
-            public static explicit operator Edge(Vertex v) => new Edge(v, v.Next);
-        }
-
-        public struct EdgeID
-        {
-            public readonly long Value;
-
-            public EdgeID(int a, int b)
-            {
-                if (a < b)
-                    Value = CalcHash(a, b);
-                else
-                    Value = CalcHash(b, a);
-            }
-
-            public int First => (int)((Value & 0x7fffffff00000000) >> 32);
-            public int Second => (int)(Value & 0x000000007fffffff);
-            static long CalcHash(int a, int b) => ((long)a << 32) | (long)b;
-            public override string ToString() => $"EdgeID:({First}, {Second})";
-        }
-
-        public class Triangle
-        {
-            private readonly TriangleProvidor Providor;
-            public readonly int SubMeshIndex;
-            private readonly int[] PositionIndices = new int[Vertex.Max];
-            private readonly Vector3[] Positions = new Vector3[Vertex.Max];
-            //private readonly int[] ColorIndices = new int[Vertex.Max];
-            private readonly Color32[] Colors = new Color32[Vertex.Max];
-            private BoneWeight[] BoneWeights = null;
-
-            public int GetPositionIndex(Vertex v) => PositionIndices[v];
-            public (int, int) GetPositionIndices(Edge e) => (PositionIndices[e.First], PositionIndices[e.Second]);
-            //public int GetColorIndex(Vertex v) => ColorIndices[v];
-            //public (int, int) GetColorIndices(Edge e) => (ColorIndices[e.First], ColorIndices[e.Second]);
-
-            internal Triangle(TriangleProvidor providor, int submesh, int posA, int posB, int posC, int colA, int colB, int colC)
-            {
-                Providor = providor;
-                SubMeshIndex = submesh;
-                PositionIndices[Vertex.A] = posA;
-                PositionIndices[Vertex.B] = posB;
-                PositionIndices[Vertex.C] = posC;
-                Positions[Vertex.A] = providor.PositionArray[posA];
-                Positions[Vertex.B] = providor.PositionArray[posB];
-                Positions[Vertex.C] = providor.PositionArray[posC];
-                //ColorIndices[Vertex.A] = colA;
-                //ColorIndices[Vertex.B] = colB;
-                //ColorIndices[Vertex.C] = colC;
-                Colors[Vertex.A] = (providor.HasColor)? providor.ColorArray[colA] : Color.white;
-                Colors[Vertex.B] = (providor.HasColor)? providor.ColorArray[colB] : Color.white;
-                Colors[Vertex.C] = (providor.HasColor)? providor.ColorArray[colC] : Color.white;
-            }
-
-            internal void AddBoneWeights(BoneWeight wgtA, BoneWeight wgtB, BoneWeight wgtC)
-            {
-                Assert.IsNull(BoneWeights);
-                BoneWeights = new BoneWeight[Vertex.Max];
-                BoneWeights[Vertex.A] = wgtA;
-                BoneWeights[Vertex.B] = wgtB;
-                BoneWeights[Vertex.C] = wgtC;
-            }
-
-            public Vector3 GetPosition(Vertex v) => Positions[v];
-            public (Vector3 First, Vector3 Second) GetPositions(Edge e) => (GetPosition(e.First), GetPosition(e.Second));
-            public Color GetColor(Vertex v) => Colors[v];
-            public (Color First, Color Second) GetColors(Edge e) => (GetColor(e.First), GetColor(e.Second));
-            public bool HasBoneWeights => BoneWeights != null;
-            public BoneWeight GetBoneWeight(Vertex v)
-            {
-                Assert.IsTrue(HasBoneWeights);
-                return BoneWeights[v];
-            }
-            public (BoneWeight First, BoneWeight Second) GetBoneWeights(Edge e) => (GetBoneWeight(e.First), GetBoneWeight(e.Second));
-
-            // Edgeを共有している三角形
-            public Triangle GetOtherTriangle(Edge e)
-            {
-                var triangles = Providor.EnumerateTrianglesWithEdgeID(GetEdgeID(e)).Where((t) => t != this).ToArray();
-                return (triangles.Length == 0)? null : triangles[0];
-            }
-
-            public float CalculateEdgeLength(Edge e)
-            {
-                var positions = GetPositions(e);
-                return Vector3.Distance(positions.First, positions.Second);
-            }
-
-            public float[] CalculateEdgeLengths() => new float[]{ CalculateEdgeLength(Edge.AB), CalculateEdgeLength(Edge.BC), CalculateEdgeLength(Edge.CA) };
-
-            public Edge FindLongestEdge()
-            {
-                var edgeLengths = CalculateEdgeLengths();
-                return (Edge)((Vertex)Array.FindIndex(edgeLengths, (len) => len == edgeLengths.Max()));
-            }
-
-            public Vector3 FaceNormal => Vector3.Cross((GetPosition(Vertex.A) - GetPosition(Vertex.B)).normalized, (GetPosition(Vertex.A) - GetPosition(Vertex.C)).normalized).normalized;
-
-            public EdgeID GetEdgeID(Edge e) => new EdgeID(GetPositionIndex(e.First), GetPositionIndex(e.Second));
-
-            // すべての辺を他の三角形と共有していない？
-            public bool IsIndependent
-            {
-                get
-                {
-                    foreach (var edge in Edge.Values)
-                    {
-                        var edgeID = GetEdgeID(edge);
-                        if (Providor.CountTrianglesWithEdgeID(edgeID) > 1)
-                        {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-            }
-            // 一辺のみ共有している状態か？
-            public bool IsFin
-            {
-                get
-                {
-                    int sharedCount = 0;
-                    foreach (var edge in Edge.Values)
-                    {
-                        var edgeID = GetEdgeID(edge);
-                        if (Providor.CountTrianglesWithEdgeID(edgeID) > 1)
-                        {
-                            ++sharedCount;
-                        }
-                    }
-                    return !IsIndependent && sharedCount <= 1;
-                }
-            }
-
-            public new string ToString()
-            {
-                return
-                    $"Index: {GetPositionIndex(Vertex.A)}, {GetPositionIndex(Vertex.B)}, {GetPositionIndex(Vertex.C)}\n" +
-                    $"Position: {GetPosition(Vertex.A)}, {GetPosition(Vertex.B)}, {GetPosition(Vertex.C)}\n" +
-                    $"Color: {GetColor(Vertex.A)}, {GetColor(Vertex.B)}, {GetColor(Vertex.C)}\n" +
-                    $"BoneWeights: {(HasBoneWeights? $"{GetBoneWeight(Vertex.A)}, {GetBoneWeight(Vertex.B)}, {GetBoneWeight(Vertex.C)}" : "None")}\n" +
-                    $"Normal: {FaceNormal}\n" +
-                    $"Longest: {FindLongestEdge()}: {CalculateEdgeLengths()[FindLongestEdge().First]}\n" +
-                    $"EdgeID: {GetEdgeID(Edge.AB)}-{GetEdgeID(Edge.BC)}-{GetEdgeID(Edge.CA)}\n" +
-                    $"SubMeshIndex: {SubMeshIndex}\n" +
-                    $"IsIndependent: {IsIndependent}\n" +
-                    $"IsFin: {IsFin}\n";
-            }
-        }
-
         private List<Triangle> Triangles = new List<Triangle>();
         private Dictionary<int, List<Triangle>> TrianglesWithSubmesh = new Dictionary<int, List<Triangle>>();
-        private Dictionary<EdgeID, List<Triangle>> TrianglesWithEdge = new Dictionary<EdgeID, List<Triangle>>();
+        private Dictionary<TriangleEdgeId, List<Triangle>> TrianglesWithEdge = new Dictionary<TriangleEdgeId, List<Triangle>>();
         private List<Vector3> Positions = new List<Vector3>();
         private List<Color> Colors = new List<Color>();
         private List<BoneWeight> BoneWeights = new List<BoneWeight>();
@@ -232,6 +198,8 @@ namespace Yoji.Editor
                 }
             }
             //foreach (var t in Triangles) Debug.Log(t.ToString());
+            SearchIndependentTriangles();
+            SearchFinTriangles();
             Sort();
             foreach (var t in Triangles) Debug.Log(t.ToString());
         }
@@ -259,7 +227,18 @@ namespace Yoji.Editor
         private Triangle Add(int subMeshIndex, int posA, int posB, int posC, int colA, int colB, int colC)
         {
             //Debug.Log($"{posA},{posB},{posC},{colA},{colB},{colC}");
-            var tri = new Triangle(this, subMeshIndex, posA, posB, posC, colA, colB, colC);
+            var tri = new Triangle(
+                subMeshIndex,
+                posA,
+                posB,
+                posC,
+                Positions[posA],
+                Positions[posB],
+                Positions[posC],
+                (HasColor)? Colors[colA] : Color.white,
+                (HasColor)? Colors[colB] : Color.white,
+                (HasColor)? Colors[colC] : Color.white
+            );
             if (HasBoneWeights)
             {
                 var wgtA = BoneWeights[posA];
@@ -275,9 +254,9 @@ namespace Yoji.Editor
             }
             TrianglesWithSubmesh[subMeshIndex].Add(tri);
 
-            foreach (var edge in Edge.Values)
+            foreach (var TriangleEdge in TriangleEdge.Values)
             {
-                var edgeHash = tri.GetEdgeID(edge);
+                var edgeHash = tri.GetEdgeID(TriangleEdge);
                 if (!TrianglesWithEdge.ContainsKey(edgeHash)) TrianglesWithEdge[edgeHash] = new List<Triangle>();
                 TrianglesWithEdge[edgeHash].Add(tri);
             }
@@ -301,6 +280,37 @@ namespace Yoji.Editor
             });
         }
 
+        private void SearchIndependentTriangles()
+        {
+            foreach (var t in Triangles)
+            {
+                var count = 0;
+                foreach (var edge in TriangleEdge.Values)
+                {
+                    var edgeID = t.GetEdgeID(edge);
+                    count = math.max(count, CountTrianglesWithEdgeID(edgeID));
+                }
+                t.IsIndependent = !(count > 1);
+            }
+        }
+
+        private void SearchFinTriangles()
+        {
+            foreach (var t in Triangles)
+            {
+                int sharedCount = 0;
+                foreach (var edge in TriangleEdge.Values)
+                {
+                    var edgeID = t.GetEdgeID(edge);
+                    if (CountTrianglesWithEdgeID(edgeID) > 1)
+                    {
+                        ++sharedCount;
+                    }
+                }
+                t.IsFin = !t.IsIndependent && sharedCount <= 1;
+            }
+        }
+
         public IReadOnlyList<Vector3> PositionArray => Positions;
         public IReadOnlyList<Color> ColorArray => Colors;
         public IReadOnlyList<BoneWeight> BoneWeightArray => BoneWeights;
@@ -309,13 +319,13 @@ namespace Yoji.Editor
         public bool HasColor => Colors.Count > 0;
         public bool HasBoneWeights => BoneWeights.Count > 0;
 
-        public int CountTrianglesWithEdgeID(EdgeID id)
+        public int CountTrianglesWithEdgeID(TriangleEdgeId id)
         {
             if (!TrianglesWithEdge.ContainsKey(id)) return 0;
             return TrianglesWithEdge[id].Count;
         }
 
-        public List<Triangle> EnumerateTrianglesWithEdgeID(EdgeID id)
+        public List<Triangle> EnumerateTrianglesWithEdgeID(TriangleEdgeId id)
         {
             if (!TrianglesWithEdge.ContainsKey(id)) return new List<Triangle>(); // empty
             return TrianglesWithEdge[id];
@@ -323,7 +333,14 @@ namespace Yoji.Editor
 
         public List<Triangle> EnumerateTrianglesWithEdge(int a, int b)
         {
-            return EnumerateTrianglesWithEdgeID(new EdgeID(a, b));
+            return EnumerateTrianglesWithEdgeID(new TriangleEdgeId(a, b));
+        }
+
+        // TriangleEdgeを共有している三角形
+        public Triangle FindAdjacentTriangle(Triangle tri, TriangleEdge e)
+        {
+            var triangles = EnumerateTrianglesWithEdgeID(tri.GetEdgeID(e)).Where((t) => t != tri).ToArray();
+            return (triangles.Length == 0)? null : triangles[0];
         }
 
         public new string ToString()

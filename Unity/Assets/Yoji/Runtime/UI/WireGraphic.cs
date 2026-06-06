@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -15,12 +16,28 @@ namespace Yoji.Runtime.UI
         protected static Material SharedMaterial = null;
         protected Mesh WorkMesh;
 
-        protected RectTransform RectTransform;
-        protected VertexBuffer VertexBuffer;
-        protected MeshFilter MeshFilter;
-        protected MeshRenderer MeshRenderer;
+        protected RectTransform? RectTransform;
+        protected VertexBuffer? VertexBuffer;
+        protected MeshFilter? MeshFilter;
+        protected MeshRenderer? MeshRenderer;
         protected Mesh Mesh => WorkMesh ?? (WorkMesh = new Mesh());
 
+#if UNITY_EDITOR
+        private void OnBeforeAssemblyReload()
+        {
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+
+            if (VertexBuffer != null) VertexBuffer.Dispose();
+            VertexBuffer = null;
+        }
+
+        protected override void OnValidate()
+        {
+            base.OnValidate();
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+        }
+#endif
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -40,6 +57,10 @@ namespace Yoji.Runtime.UI
             MeshRenderer.receiveShadows = false;
 
             Interlocked.Increment(ref SharedCount);
+#if UNITY_EDITOR
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+#endif
         }
 
         protected override void OnDisable()

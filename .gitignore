@@ -1,7 +1,11 @@
 Unity/Library
-Unity/Logs
-Unity/Temp
-Unity/UserSettings
+Unity/Logs/
+Unity/Temp/
+Unity/UserSettings/
 Unity/Assets/SceneDependencyCache*
+Unity/obj/
 .DS_Store
 .vscode
+*.csproj
+*.sln[x]
+
