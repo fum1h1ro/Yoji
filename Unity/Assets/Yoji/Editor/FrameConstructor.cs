@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -21,7 +20,7 @@ namespace Yoji.Editor
             public Position LeftPosition { get; }
             public Position RightPosition { get; }
             public Normal NormalA { get; }
-            public Normal NormalB { get; private set; }
+            public Normal NormalB { get; }
             public Color BeginColor { get; }
             public Color EndColor { get; }
             public BoneWeight BeginBoneWeight { get; internal set; }
@@ -58,11 +57,6 @@ namespace Yoji.Editor
                 BeginColor = colA;
                 EndColor = colB;
                 Priority = priority;
-            }
-
-            public void AdjustNormal()
-            {
-                NormalB = NormalA;
             }
         }
 
@@ -171,7 +165,6 @@ namespace Yoji.Editor
             }
             wire.NoCull = nocull;
             wire.NoSmooth = wire.NoFront = otherIsFin;
-            //Debug.Log($"normal: {nmlA} {nmlB}");
             return AddWire(id, wire, priority, triangle.IsFin);
         }
 
@@ -194,8 +187,6 @@ namespace Yoji.Editor
                 {
                     _wires[existsWireIndex] = wire;
                 }
-                Debug.Log($"same {_wires[existsWireIndex].NormalA} {_wires[existsWireIndex].NormalB}");
-                //_wires[existsWireIndex].AdjustNormal();
             }
             return 0;
         }
@@ -250,13 +241,6 @@ namespace Yoji.Editor
                         {
                             var wire = _wires[i];
                             if (wire.SubMeshIndex != smi) continue;
-                //int beginIndex, int endIndex, int leftIndex, int rightIndex,
-                //Vector3 beginPos, Vector3 endPos,
-                //Vector3 leftPos, Vector3 rightPos,
-                //Color col0, Color col1,
-                //BoneWeight wgt0, BoneWeight wgt1,
-                //BoneWeight wgt2, BoneWeight wgt3,
-                //bool nosmoothangle, bool nocull, bool nofront
                             subMesh.AddLine(
                                 wire.BeginIndex,
                                 wire.EndIndex,
