@@ -20,6 +20,7 @@ namespace Yoji.Components
         private FrameStructure _oldFrameStructure;
         private Mesh _mesh;
         private VertexBuffer _vertexBuffer;
+        private NativeArray<float4x4> _bones;
 
 #if UNITY_EDITOR
         private void OnBeforeAssemblyReload()
@@ -36,6 +37,7 @@ namespace Yoji.Components
                 _vertexBuffer.Dispose();
                 _vertexBuffer = null;
             }
+            if (_bones.IsCreated) _bones.Dispose();
         }
 #endif
         private void OnEnable()
@@ -79,6 +81,7 @@ namespace Yoji.Components
                 _vertexBuffer.Dispose();
                 _vertexBuffer = null;
             }
+            if (_bones.IsCreated) _bones.Dispose();
         }
 
         private void LateUpdate()
@@ -100,22 +103,24 @@ namespace Yoji.Components
             var nline = FrameStructure.LineCount;
             if (_vertexBuffer != null) _vertexBuffer.Dispose();
             _vertexBuffer = new VertexBuffer(nline);
+
+            if (_bones.IsCreated) _bones.Dispose();
+            _bones = new NativeArray<float4x4>(FrameStructure.NativeBindPoses.Length, Allocator.Persistent);
         }
 
         private void MakeMesh()
         {
             var rootInverse = math.inverse(_transform.localToWorldMatrix);
-            var bones = new NativeArray<float4x4>(FrameStructure.NativeBindPoses.Length, Allocator.TempJob);
             for (var i = 0; i < Bones.Length; ++i)
             {
-                bones[i] = Bones[i].localToWorldMatrix;
+                _bones[i] = Bones[i].localToWorldMatrix;
             }
-            (new CalculateJob()
+            var calcHandle = new CalculateJob()
             {
                 RootInverse = rootInverse,
                 BindPoses = FrameStructure.NativeBindPoses,
-                Bones = bones,
-            }).Run(bones.Length);
+                Bones = _bones,
+            }.Schedule(_bones.Length, 32);
 
             using (var rawAcc = _vertexBuffer.BeginRawAccess())
             {
@@ -126,18 +131,15 @@ namespace Yoji.Components
                 var nline = FrameStructure.LineCount;
                 var job = new RenderJob()
                 {
-                    Bones = bones,
+                    Bones = _bones,
                     Lines = FrameStructure.NativeLines,
                     SourceVertices = FrameStructure.NativeVertices,
                     Indices = rawAcc.Indices,
                     Vertices = rawAcc.Vertices,
                 };
-                job.Run(nline);
-
+                job.Schedule(nline, 32, calcHandle).Complete();
             }
             _vertexBuffer.ApplyToMesh(_mesh);
-
-            bones.Dispose();
         }
 
         [BurstCompile]
