@@ -9,3 +9,7 @@ Unity/obj/
 *.csproj
 *.sln[x]
 
+.agents/
+.claude/
+skills-lock.json
+
