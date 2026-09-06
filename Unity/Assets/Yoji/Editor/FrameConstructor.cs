@@ -119,9 +119,10 @@ namespace Yoji.Editor
             var idxD = -1;
             var posD = default(Position);
             var otherNormal = Normal.Invalid;
+            var sideEdge = default(TriangleEdge);
             if (sideTriangle != null)
             {
-                var sideEdge = sideTriangle.FindEdgeWithId(id);
+                sideEdge = sideTriangle.FindEdgeWithId(id);
                 idxD = sideTriangle.GetIndex(sideEdge.Second.Next);
                 posD = sideTriangle.GetPosition(sideEdge.Second.Next);
                 otherNormal = sideTriangle.FaceNormal;
@@ -160,7 +161,6 @@ namespace Yoji.Editor
             }
             if (sideTriangle != null && sideTriangle.HasBoneWeights)
             {
-                var sideEdge = sideTriangle.FindEdgeWithId(id);
                 wire.RightBoneWeight = sideTriangle.GetBoneWeight(sideEdge.Second.Next);
             }
             wire.NoCull = nocull;
@@ -201,8 +201,9 @@ namespace Yoji.Editor
         public VertexBuffer ToVertexBuffer()
         {
             int nline = _wires.Count;
+            int subMeshCount = SubMeshCount;
             var vb = new VertexBuffer(nline);
-            for (int smi = 0; smi < SubMeshCount; ++smi)
+            for (int smi = 0; smi < subMeshCount; ++smi)
             {
                 using (var sm = vb.CreateSubMesh())
                 {
@@ -230,10 +231,11 @@ namespace Yoji.Editor
         public FrameStructure ToFrameStructure()
         {
             int nline = _wires.Count;
+            int subMeshCount = SubMeshCount;
             var fs = ScriptableObject.CreateInstance<FrameStructure>();
             using (var editor = fs.BeginEdit())
             {
-                for (int smi = 0; smi < SubMeshCount; ++smi)
+                for (int smi = 0; smi < subMeshCount; ++smi)
                 {
                     using (var subMesh = editor.BeginCreateSubMesh())
                     {

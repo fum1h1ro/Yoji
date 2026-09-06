@@ -314,8 +314,12 @@ namespace Yoji.Editor
         // TriangleEdgeを共有している三角形
         public Triangle FindAdjacentTriangle(Triangle tri, TriangleEdge e)
         {
-            var triangles = EnumerateTrianglesWithEdgeID(tri.GetEdgeID(e)).Where((t) => t != tri).ToArray();
-            return (triangles.Length == 0)? null : triangles[0];
+            var triangles = EnumerateTrianglesWithEdgeID(tri.GetEdgeID(e));
+            foreach (var t in triangles)
+            {
+                if (t != tri) return t;
+            }
+            return null;
         }
 
         public new string ToString()
