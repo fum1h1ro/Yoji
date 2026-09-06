@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
 
-namespace Yoji.Runtime.UI
+namespace Yoji.UI
 {
     [RequireComponent(typeof(MeshFilter))]
     [RequireComponent(typeof(MeshRenderer))]
@@ -21,6 +21,22 @@ namespace Yoji.Runtime.UI
         protected MeshRenderer MeshRenderer;
         protected Mesh Mesh => WorkMesh ?? (WorkMesh = new Mesh());
 
+#if UNITY_EDITOR
+        private void OnBeforeAssemblyReload()
+        {
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+
+            if (VertexBuffer != null) VertexBuffer.Dispose();
+            VertexBuffer = null;
+        }
+
+        protected override void OnValidate()
+        {
+            base.OnValidate();
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+        }
+#endif
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -40,6 +56,10 @@ namespace Yoji.Runtime.UI
             MeshRenderer.receiveShadows = false;
 
             Interlocked.Increment(ref SharedCount);
+#if UNITY_EDITOR
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+#endif
         }
 
         protected override void OnDisable()

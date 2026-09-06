@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Yoji.Runtime.UI
+namespace Yoji.UI
 {
     public class TextDrawer : WireGraphic
     {
@@ -224,7 +224,7 @@ namespace Yoji.Runtime.UI
             }
         }
 
-        void AddChar(ref ISubMeshCreator sm, ref Vector2 pos, char c, Color color)
+        void AddChar(ref VertexBuffer.SubMeshCreator sm, ref Vector2 pos, char c, Color color)
         {
             var table = Font.Get(c);
             var s = Information.Scale;

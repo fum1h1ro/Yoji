@@ -7,6 +7,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Assertions;
 using UnityEditor;
 using UnityEditor.Experimental.AssetImporters;
+using Yoji;
+using Yoji.Components;
 
 namespace Yoji.Editor
 {
@@ -14,7 +16,7 @@ namespace Yoji.Editor
     {
         private bool IsReadableBackup;
 
-        public override uint GetVersion() => 1;
+        public override uint GetVersion() => 2;
 
         void OnPreprocessModel()
         {
@@ -28,7 +30,7 @@ namespace Yoji.Editor
             var modelImporter = (ModelImporter)assetImporter;
             var assetDir = Path.GetDirectoryName(assetPath);
             var setting =
-                AssetDatabase.FindAssets("t:ConvertSettings", new[]{ assetDir })
+                AssetDatabase.FindAssets("t:Yoji.Editor.ConvertSettings", new[]{ assetDir })
                     .Select(x => AssetDatabase.GUIDToAssetPath(x))
                     .Where(x => Path.GetDirectoryName(x) == assetDir)
                     .Select(x => AssetDatabase.LoadAssetAtPath<ConvertSettings>(x))
@@ -42,14 +44,13 @@ namespace Yoji.Editor
                 ModifyMeshRenderer(renderer);
                 if (renderer is SkinnedMeshRenderer skinnedMeshRenderer)
                 {
-                    ModifyMesh(skinnedMeshRenderer.sharedMesh, setting, true);
+                    ConvertSkinnedMesh(skinnedMeshRenderer, skinnedMeshRenderer.sharedMesh, setting);
                 }
                 else
                 {
                     var meshFilter = renderer.gameObject.GetComponent<MeshFilter>();
-                    ModifyMesh(meshFilter.sharedMesh, setting, false);
+                    ModifyMesh((MeshRenderer)renderer, meshFilter.sharedMesh, setting);
                 }
-                ModifyMaterials(renderer.sharedMaterials, setting);
             }
             modelImporter.isReadable = IsReadableBackup;
         }
@@ -60,39 +61,51 @@ namespace Yoji.Editor
             renderer.receiveShadows = false;
         }
 
-        private void ModifyMesh(Mesh mesh, ConvertSettings setting, bool isSkinnedMesh)
+        private void ConvertSkinnedMesh(SkinnedMeshRenderer renderer, Mesh mesh, ConvertSettings setting)
         {
-            var constructor = new FrameConstructor(isSkinnedMesh);
+            var provider = new TriangleProvider(mesh);
+            var constructor = new FrameConstructor(provider);
+            // SkinnedMeshはスキニング変形後まで法線が確定しないため、バインドポーズ時点の法線比較による
+            // 不要ワイヤー削除(DestroyUselessWire)は適用できない。常に全ワイヤーを保持する。
+            constructor.DestroyUselessWire = false;
+            constructor.Construct();
+
+            var fs = constructor.ToFrameStructure();
+            fs.name = $"frame_{mesh.name}";
+            using (var editor = fs.BeginEdit())
+            {
+                foreach (var bindPose in mesh.bindposes)
+                {
+                    editor.AddBindPose(bindPose);
+                }
+            }
+
+            context.AddObjectToAsset(fs.name, fs);
+
+            var fr = renderer.gameObject.AddComponent<FrameRenderer>();
+            fr.FrameStructure = fs;
+            fr.Bones = renderer.bones;
+            fr.Materials = renderer.sharedMaterials;
+
+            ModifyMaterials(renderer.sharedMaterials, setting);
+
+            SkinnedMeshRenderer.DestroyImmediate(renderer);
+        }
+
+        private void ModifyMesh(MeshRenderer renderer, Mesh mesh, ConvertSettings setting)
+        {
+            var provider = new TriangleProvider(mesh);
+            var constructor = new FrameConstructor(provider);
             constructor.DestroyUselessWire = setting.DestroyUselessWire;
+            constructor.Construct();
 
-            var providor = new TriangleProvidor(mesh);
-            int count = 0;
-            foreach (var triangle in providor.AllTriangles)
+            using (var vb = constructor.ToVertexBuffer())
             {
-                var smi = triangle.SubMeshIndex;
-                //var priority = _convertSettings[smi].Priority;
-                var priority = 0;
-                count += constructor.AddTriangle(triangle, priority);
+                vb.ApplyToMesh(mesh);
+                mesh.RecalculateBounds();
             }
 
-            if (isSkinnedMesh)
-            {
-                using (var vb = constructor.ToVertexBuffer())
-                {
-                    var bindposes = mesh.bindposes;
-                    vb.ApplyToMesh(mesh);
-                    mesh.bindposes = bindposes;
-                    mesh.RecalculateBounds();
-                }
-            }
-            else
-            {
-                using (var vb = constructor.ToVertexBuffer())
-                {
-                    vb.ApplyToMesh(mesh);
-                    mesh.RecalculateBounds();
-                }
-            }
+            ModifyMaterials(renderer.sharedMaterials, setting);
         }
 
         private void ModifyMaterials(Material[] materials, ConvertSettings setting)

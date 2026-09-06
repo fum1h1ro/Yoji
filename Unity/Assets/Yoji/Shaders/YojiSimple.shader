@@ -42,7 +42,8 @@ Shader "Yoji/Simple"
             //#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
             //#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
             #include "UnityCG.cginc"
-            //#define NO_OPTIMIZE
+            #define NO_OPTIMIZE
+            //#define NO_CULL // 線分のカリングをしない(NO_OPTIMIZE時のみ有効)
             //#define COMPUTE_SHADER
             #include "Quat.cginc"
             #include "Random.cginc"
@@ -218,6 +219,8 @@ Shader "Yoji/Simple"
                 uint noFront = (renderFlag & NoFront) >> NoFrontShift;
                 uint noSmoothAngle = (renderFlag & NoSmoothAngle) >> NoSmoothAngleShift;
 #ifdef NO_OPTIMIZE
+#   ifdef NO_CULL
+#   else
                 float smooth_angle = (noSmoothAngle)? 1.0 : (1.0 - calc_smooth_angle(worldNormal0, worldNormal1));
                 if (noCull)
                 {
@@ -244,6 +247,7 @@ Shader "Yoji/Simple"
                         lineWidth *= smooth_angle;
                     }
                 }
+#   endif
 #else
 
                 // 0b000 = back
