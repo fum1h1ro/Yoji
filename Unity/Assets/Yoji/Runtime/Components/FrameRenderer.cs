@@ -128,6 +128,7 @@ namespace Yoji.Components
                 {
                     Bones = bones,
                     Lines = FrameStructure.NativeLines,
+                    SourceVertices = FrameStructure.NativeVertices,
                     Indices = rawAcc.Indices,
                     Vertices = rawAcc.Vertices,
                 };
@@ -196,36 +197,59 @@ namespace Yoji.Components
         {
             [ReadOnly] public NativeArray<float4x4> Bones;
             [ReadOnly] public NativeArray<FrameStructure.Line> Lines;
+            [ReadOnly] public NativeArray<FrameStructure.Vertex> SourceVertices;
             [NativeDisableParallelForRestriction]
             public NativeArray<uint> Indices;
             [NativeDisableParallelForRestriction]
             public NativeArray<VertexBuffer.Vertex> Vertices;
+
+            // 4ボーンのLinear Blend Skinning
+            static float3 SkinPosition(in FrameStructure.Vertex vertex, in NativeArray<float4x4> bones)
+            {
+                var w = vertex.Weight.Weights;
+                var idx = vertex.Weight.Indices;
+                var pos = vertex.Position;
+                float3 result = w.x * math.transform(bones[(int)idx.x], pos);
+                result += w.y * math.transform(bones[(int)idx.y], pos);
+                result += w.z * math.transform(bones[(int)idx.z], pos);
+                result += w.w * math.transform(bones[(int)idx.w], pos);
+                return result;
+            }
+
+            // Triangle.FaceNormal と同じ向きになる面法線
+            static float3 CalcFaceNormal(float3 a, float3 b, float3 c)
+            {
+                return math.normalize(math.cross(math.normalize(a - b), math.normalize(a - c)));
+            }
 
             public void Execute(int index)
             {
                 var vbtop = index * VertexBuffer.NumberOfVerticesOfLine;
                 var line = Lines[index];
 
-                float3 beginPos = line.BeginPos;
-                float3 endPos = line.EndPos;
-                float3 normal0 = line.Normal0;
-                float3 normal1 = line.Normal1;
+                float3 beginPos = SkinPosition(SourceVertices[line.BeginIndex], Bones);
+                float3 endPos = SkinPosition(SourceVertices[line.EndIndex], Bones);
+                float3 leftPos = SkinPosition(SourceVertices[line.LeftIndex], Bones);
 
-                float4x4 beginMtx0 = Bones[(int)line.BeginWeight.Indices[0]];
-                beginPos = math.transform(beginMtx0, beginPos);
+                float3 normal0 = CalcFaceNormal(beginPos, endPos, leftPos);
 
-                // 正確な法線変換
-                float3x3 m3 = (float3x3)beginMtx0; // 上位3x3
-                float3x3 invTranspose = math.transpose(math.inverse(m3));
-                normal0 = math.normalize(math.mul(invTranspose, normal0));
-                normal1 = math.normalize(math.mul(invTranspose, normal1));
-
-                float4x4 endMtx0 = Bones[(int)line.EndWeight.Indices[0]];
-                endPos = math.transform(endMtx0, endPos);
+                bool noCull = (line.Flag & (uint)LineFlag.NoCull) != 0;
+                float3 normal1;
+                if (noCull)
+                {
+                    // シェーダー側はnoCull時にnormal1を参照しない
+                    normal1 = normal0;
+                }
+                else
+                {
+                    float3 rightPos = SkinPosition(SourceVertices[line.RightIndex], Bones);
+                    // 隣接三角形はbegin/endの巻き方向が逆になるため基準点をendにする
+                    normal1 = CalcFaceNormal(endPos, beginPos, rightPos);
+                }
 
                 VertexBuffer.SetLine(
                     Vertices,
-                    vbtop, 
+                    vbtop,
                     beginPos,
                     endPos,
                     normal0,

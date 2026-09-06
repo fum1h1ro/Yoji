@@ -65,7 +65,9 @@ namespace Yoji.Editor
         {
             var provider = new TriangleProvider(mesh);
             var constructor = new FrameConstructor(provider);
-            constructor.DestroyUselessWire = setting.DestroyUselessWire;
+            // SkinnedMeshはスキニング変形後まで法線が確定しないため、バインドポーズ時点の法線比較による
+            // 不要ワイヤー削除(DestroyUselessWire)は適用できない。常に全ワイヤーを保持する。
+            constructor.DestroyUselessWire = false;
             constructor.Construct();
 
             var fs = constructor.ToFrameStructure();

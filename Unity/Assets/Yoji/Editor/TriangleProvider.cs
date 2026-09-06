@@ -73,14 +73,14 @@ namespace Yoji.Editor
     public class Triangle
     {
         public readonly int SubMeshIndex;
-        private readonly Array3<int> _positionIndices;
+        private readonly Array3<int> _indices;
         private readonly Array3<Position> _positions;
         private readonly Array3<Color32> _colors;
         private Array3<BoneWeight> _boneWeights;
         public bool HasBoneWeights { get; private set; } = false;
 
-        public int GetPositionIndex(TriangleVertex v) => _positionIndices[v];
-        public (int, int) GetPositionIndices(TriangleEdge e) => (_positionIndices[e.First], _positionIndices[e.Second]);
+        public int GetIndex(TriangleVertex v) => _indices[v];
+        public (int, int) GetIndices(TriangleEdge e) => (_indices[e.First], _indices[e.Second]);
 
         public bool IsIndependent { get; internal set; }
         public bool IsFin { get; internal set; }
@@ -99,7 +99,7 @@ namespace Yoji.Editor
         )
         {
             SubMeshIndex = submesh;
-            _positionIndices = new(posIndexA, posIndexB, posIndexC);
+            _indices = new(posIndexA, posIndexB, posIndexC);
             _positions = new(new Position(posA), new Position(posB), new Position(posC));
             _colors = new(colA, colB, colC);
         }
@@ -135,6 +135,16 @@ namespace Yoji.Editor
             var edgeLengths = CalculateEdgeLengths();
             return (TriangleEdge)((TriangleVertex)Array.FindIndex(edgeLengths, (len) => len == edgeLengths.Max()));
         }
+        public TriangleEdge FindEdgeWithId(TriangleEdgeId id)
+        {
+            var edges = TriangleEdge.Values;
+            foreach (var edge in edges)
+            {
+                var edgeId = GetEdgeID(edge);
+                if (edgeId.Value == id.Value) return edge;
+            }
+            throw new Exception($"Triangle.FindEdgeId: Not found. id={id}");
+        }
 
         public Normal FaceNormal =>
             new Normal(Vector3.Cross(
@@ -142,12 +152,12 @@ namespace Yoji.Editor
                 ((Vector3)GetPosition(TriangleVertex.A) - (Vector3)GetPosition(TriangleVertex.C)).normalized
             ).normalized);
 
-        public TriangleEdgeId GetEdgeID(TriangleEdge e) => new TriangleEdgeId(GetPositionIndex(e.First), GetPositionIndex(e.Second));
+        public TriangleEdgeId GetEdgeID(TriangleEdge e) => new TriangleEdgeId(GetIndex(e.First), GetIndex(e.Second));
 
         public new string ToString()
         {
             return
-                $"Index: {GetPositionIndex(TriangleVertex.A)}, {GetPositionIndex(TriangleVertex.B)}, {GetPositionIndex(TriangleVertex.C)}\n" +
+                $"Index: {GetIndex(TriangleVertex.A)}, {GetIndex(TriangleVertex.B)}, {GetIndex(TriangleVertex.C)}\n" +
                 $"Position: {GetPosition(TriangleVertex.A)}, {GetPosition(TriangleVertex.B)}, {GetPosition(TriangleVertex.C)}\n" +
                 $"Color: {GetColor(TriangleVertex.A)}, {GetColor(TriangleVertex.B)}, {GetColor(TriangleVertex.C)}\n" +
                 $"BoneWeights: {(HasBoneWeights? $"{GetBoneWeight(TriangleVertex.A)}, {GetBoneWeight(TriangleVertex.B)}, {GetBoneWeight(TriangleVertex.C)}" : "None")}\n" +
@@ -170,11 +180,24 @@ namespace Yoji.Editor
 
         public TriangleProvider(Mesh mesh)
         {
-            mesh.GetVertices(_positions);
+            var posTemp = new List<Vector3>();
+
+            mesh.GetVertices(posTemp);
             mesh.GetColors(_colors);
             mesh.GetBoneWeights(_boneWeights);
 
-            var table = MakeTranslateTable();
+            var posCache = new Dictionary<Vector3, int>(posTemp.Count);
+            _positions.Capacity = posTemp.Count;
+
+            int GetOrAddPosition(Vector3 pos)
+            {
+                if (posCache.TryGetValue(pos, out var index)) return index;
+                index = _positions.Count;
+                _positions.Add(pos);
+                posCache[pos] = index;
+                return index;
+            }
+
             for (int smi = 0; smi < mesh.subMeshCount; ++smi)
             {
                 var indices = mesh.GetTriangles(smi);
@@ -183,13 +206,12 @@ namespace Yoji.Editor
                     int idxA = indices[ti*3+0];
                     int idxB = indices[ti*3+1];
                     int idxC = indices[ti*3+2];
-                    int posA = (table[idxA] < 0)? idxA : table[idxA];
-                    int posB = (table[idxB] < 0)? idxB : table[idxB];
-                    int posC = (table[idxC] < 0)? idxC : table[idxC];
-                    int colA = idxA;
-                    int colB = idxB;
-                    int colC = idxC;
-                    Add(smi, posA, posB, posC, colA, colB, colC);
+
+                    int posIdxA = GetOrAddPosition(posTemp[idxA]);
+                    int posIdxB = GetOrAddPosition(posTemp[idxB]);
+                    int posIdxC = GetOrAddPosition(posTemp[idxC]);
+
+                    Add(smi, posIdxA, posIdxB, posIdxC, idxA, idxB, idxC);
                 }
             }
             //foreach (var t in _triangles) Debug.Log(t.ToString());
@@ -199,46 +221,25 @@ namespace Yoji.Editor
             foreach (var t in _triangles) Debug.Log(t.ToString());
         }
 
-        // 同一座標の頂点をまとめるためのテーブルを作る
-        private int[] MakeTranslateTable()
+        private Triangle Add(int subMeshIndex, int posIdxA, int posIdxB, int posIdxC, int vtxIdxA, int vtxIdxB, int vtxIdxC)
         {
-            var table = new int[_positions.Count];
-            table = table.Select(_ => -1).ToArray();
-            for (int i = 0; i < _positions.Count; ++i)
-            {
-                if (table[i] >= 0) continue;
-                for (int j = i+1; j < _positions.Count; ++j)
-                {
-                    if (table[j] >= 0) continue;
-                    if (_positions[i] == _positions[j]) // approximately
-                    {
-                        table[j] = i;
-                    }
-                }
-            }
-            return table;
-        }
-
-        private Triangle Add(int subMeshIndex, int posA, int posB, int posC, int colA, int colB, int colC)
-        {
-            //Debug.Log($"{posA},{posB},{posC},{colA},{colB},{colC}");
             var tri = new Triangle(
                 subMeshIndex,
-                posA,
-                posB,
-                posC,
-                _positions[posA],
-                _positions[posB],
-                _positions[posC],
-                (HasColor)? _colors[colA] : Color.white,
-                (HasColor)? _colors[colB] : Color.white,
-                (HasColor)? _colors[colC] : Color.white
+                posIdxA,
+                posIdxB,
+                posIdxC,
+                _positions[posIdxA],
+                _positions[posIdxB],
+                _positions[posIdxC],
+                (HasColor)? _colors[vtxIdxA] : Color.white,
+                (HasColor)? _colors[vtxIdxB] : Color.white,
+                (HasColor)? _colors[vtxIdxC] : Color.white
             );
             if (HasBoneWeights)
             {
-                var wgtA = _boneWeights[posA];
-                var wgtB = _boneWeights[posB];
-                var wgtC = _boneWeights[posC];
+                var wgtA = _boneWeights[vtxIdxA];
+                var wgtB = _boneWeights[vtxIdxB];
+                var wgtC = _boneWeights[vtxIdxC];
                 tri.AddBoneWeights(wgtA, wgtB, wgtC);
             }
             _triangles.Add(tri);

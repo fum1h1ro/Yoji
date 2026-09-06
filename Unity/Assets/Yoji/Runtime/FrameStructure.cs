@@ -34,18 +34,25 @@ namespace Yoji
                 Indices = new uint4((uint)bw.boneIndex0, (uint)bw.boneIndex1, (uint)bw.boneIndex2, (uint)bw.boneIndex3);
             }
         }
+
+        [Serializable]
+        [StructLayout(LayoutKind.Sequential)]
+        public struct Vertex
+        {
+            public float3 Position;
+            public WeightsAndIndices Weight;
+        }
+
         [Serializable]
         [StructLayout(LayoutKind.Sequential)]
         public struct Line
         {
-            public float3 BeginPos;
-            public float3 EndPos;
-            public float3 Normal0;
-            public float3 Normal1;
+            public int BeginIndex;
+            public int EndIndex;
+            public int LeftIndex;
+            public int RightIndex;
             public Color32 BeginColor;
             public Color32 EndColor;
-            public WeightsAndIndices BeginWeight;
-            public WeightsAndIndices EndWeight;
             public uint Flag;
         }
 
@@ -53,11 +60,13 @@ namespace Yoji
         {
             private FrameStructure _frame;
             private bool _isCreatingSubMesh;
+            private Dictionary<int, int> _cacheMap;
 
             internal Editor(FrameStructure frame)
             {
                 _frame = frame;
                 _isCreatingSubMesh = false;
+                _cacheMap = new Dictionary<int, int>();
             }
 
             public void Dispose()
@@ -78,9 +87,38 @@ namespace Yoji
                 _isCreatingSubMesh = false;
             }
 
-            internal void AddLine(Vector3 bgn, Vector3 end, Vector3 nml0, Vector3 nml1, Color col0, Color col1, BoneWeight wgt0, BoneWeight wgt1, bool nosmoothangle, bool nocull, bool nofront)
+            internal void AddLine(
+                int beginIndex, int endIndex, int leftIndex, int rightIndex,
+                Vector3 beginPos, Vector3 endPos,
+                Vector3 leftPos, Vector3 rightPos,
+                Color col0, Color col1,
+                BoneWeight wgt0, BoneWeight wgt1,
+                BoneWeight wgt2, BoneWeight wgt3,
+                bool nosmoothangle, bool nocull, bool nofront
+            )
             {
-                _frame.AddLine(bgn, end, nml0, nml1, col0, col1, wgt0, wgt1, nosmoothangle, nocull, nofront);
+                var virtualBeginIndex = _cacheMap.ContainsKey(beginIndex) ? _cacheMap[beginIndex] : _frame.AddVertex(beginPos, wgt0);
+                var virtualEndIndex = _cacheMap.ContainsKey(endIndex) ? _cacheMap[endIndex] : _frame.AddVertex(endPos, wgt1);
+                var virtualLeftIndex = _cacheMap.ContainsKey(leftIndex) ? _cacheMap[leftIndex] : _frame.AddVertex(leftPos, wgt2);
+                // rightIndex < 0 は隣接三角形が無い(NoCull)ワイヤー。仮想頂点を作らずそのまま無効値を伝播する
+                var virtualRightIndex = rightIndex < 0 ? -1 : (_cacheMap.ContainsKey(rightIndex) ? _cacheMap[rightIndex] : _frame.AddVertex(rightPos, wgt3));
+
+                _cacheMap[beginIndex] = virtualBeginIndex;
+                _cacheMap[endIndex] = virtualEndIndex;
+                _cacheMap[leftIndex] = virtualLeftIndex;
+                if (rightIndex >= 0) _cacheMap[rightIndex] = virtualRightIndex;
+
+                _frame.AddLine(
+                    virtualBeginIndex,
+                    virtualEndIndex,
+                    virtualLeftIndex,
+                    virtualRightIndex,
+                    col0,
+                    col1,
+                    nosmoothangle,
+                    nocull,
+                    nofront
+                );
             }
 
             public void AddBindPose(Matrix4x4 bindPose)
@@ -107,26 +145,50 @@ namespace Yoji
                 _editor.EndCreateSubMesh(_start, _count);
             }
 
-            public void AddLine(Vector3 bgn, Vector3 end, Vector3 nml0, Vector3 nml1, Color col0, Color col1, BoneWeight wgt0, BoneWeight wgt1, bool nosmoothangle, bool nocull, bool nofront)
+            public void AddLine(
+                int beginIndex, int endIndex, int leftIndex, int rightIndex,
+                Vector3 beginPos, Vector3 endPos,
+                Vector3 leftPos, Vector3 rightPos,
+                Color col0, Color col1,
+                BoneWeight wgt0, BoneWeight wgt1,
+                BoneWeight wgt2, BoneWeight wgt3,
+                bool nosmoothangle, bool nocull, bool nofront
+            )
             {
-                _editor.AddLine(bgn, end, nml0, nml1, col0, col1, wgt0, wgt1, nosmoothangle, nocull, nofront);
+                _editor.AddLine(
+                    beginIndex, endIndex, leftIndex, rightIndex,
+                    beginPos, endPos,
+                    leftPos, rightPos,
+                    col0, col1,
+                    wgt0, wgt1,
+                    wgt2, wgt3,
+                    nosmoothangle,
+                    nocull,
+                    nofront
+                );
                 _count++;
             }
         }
 
         public Line[] Lines;
+        public Vertex[] Vertices;
         public SubMesh[] SubMeshes;
         public Matrix4x4[] BindPoses;
+
         private List<Line> _lines;
+        private List<Vertex> _vertices;
         private List<SubMesh> _subMeshes;
         private List<Matrix4x4> _bindPoses;
+
         private NativeArray<Line> _nativeLines;
+        private NativeArray<Vertex> _nativeVertices;
         private NativeArray<float4x4> _nativeBindPoses;
 
         private bool _isEditing = false;
 
         public int LineCount => Lines?.Length ?? 0;
         public NativeArray<Line> NativeLines => _nativeLines;
+        public NativeArray<Vertex> NativeVertices => _nativeVertices;
         public NativeArray<float4x4> NativeBindPoses => _nativeBindPoses;
 
         public void OnBeforeSerialize()
@@ -155,6 +217,7 @@ namespace Yoji
         private void Cleanup()
         {
             if (_nativeLines.IsCreated) _nativeLines.Dispose();
+            if (_nativeVertices.IsCreated) _nativeVertices.Dispose();
             if (_nativeBindPoses.IsCreated) _nativeBindPoses.Dispose();
         }
 
@@ -179,6 +242,7 @@ namespace Yoji
             Assert.IsFalse(_isEditing);
             Lines = Array.Empty<Line>();
             if (_nativeLines.IsCreated) _nativeLines.Dispose();
+            if (_nativeVertices.IsCreated) _nativeVertices.Dispose();
             if (_nativeBindPoses.IsCreated) _nativeBindPoses.Dispose();
             _subMeshes.Clear();
         }
@@ -189,29 +253,37 @@ namespace Yoji
         }
 
         internal void AddLine(
-            Vector3 bgn, Vector3 end,
-            Vector3 nml0, Vector3 nml1,
+            int beginIndex, int endIndex, int leftIndex, int rightIndex,
             Color col0, Color col1,
-            BoneWeight wgt0, BoneWeight wgt1,
             bool nosmoothangle, bool nocull, bool nofront
         )
         {
             var line = new Line
             {
-                BeginPos = bgn,
-                EndPos = end,
-                Normal0 = nml0,
-                Normal1 = nml1,
+                BeginIndex = beginIndex,
+                EndIndex = endIndex,
+                LeftIndex = leftIndex,
+                RightIndex = rightIndex,
                 BeginColor = col0,
                 EndColor = col1,
-                BeginWeight = new WeightsAndIndices(wgt0),
-                EndWeight = new WeightsAndIndices(wgt1),
                 Flag =
                     (nosmoothangle ? (uint)LineFlag.NoSmoothAngle : 0u) |
                     (nocull ? (uint)LineFlag.NoCull : 0u) |
                     (nofront ? (uint)LineFlag.NoFront : 0u)
             };
             _lines.Add(line);
+        }
+
+        internal int AddVertex(Vector3 pos, BoneWeight weight)
+        {
+            int index = _vertices.Count;
+            var vertex = new Vertex
+            {
+                Position = pos,
+                Weight = new WeightsAndIndices(weight)
+            };
+            _vertices.Add(vertex);
+            return index;
         }
 
         internal void AddBindPose(Matrix4x4 bindPose)
@@ -230,6 +302,15 @@ namespace Yoji
             else
             {
                 _lines = new List<Line>(Lines);
+            }
+
+            if (Vertices == null)
+            {
+                _vertices = new List<Vertex>();
+            }
+            else
+            {
+                _vertices = new List<Vertex>(Vertices);
             }
 
             if (SubMeshes == null)
@@ -256,9 +337,11 @@ namespace Yoji
             Assert.IsNotNull(_lines);
 
             Lines = _lines.ToArray();
+            Vertices = _vertices.ToArray();
             SubMeshes = _subMeshes.ToArray();
             BindPoses = _bindPoses.ToArray();
             _lines = null;
+            _vertices = null;
             _subMeshes = null;
             _bindPoses = null;
         }
@@ -266,9 +349,11 @@ namespace Yoji
         private void ArrayToNative()
         {
             if (_nativeLines.IsCreated) _nativeLines.Dispose();
+            if (_nativeVertices.IsCreated) _nativeVertices.Dispose();
             if (_nativeBindPoses.IsCreated) _nativeBindPoses.Dispose();
             Assert.IsNotNull(Lines);
             _nativeLines = new NativeArray<Line>(Lines, Allocator.Persistent);
+            _nativeVertices = new NativeArray<Vertex>(Vertices, Allocator.Persistent);
             _nativeBindPoses = new NativeArray<float4x4>(BindPoses.Length, Allocator.Persistent);
             for (var i = 0; i < BindPoses.Length; ++i)
             {

@@ -12,24 +12,43 @@ namespace Yoji.Editor
         public class Wire
         {
             public int SubMeshIndex { get; }
+            public int BeginIndex { get; }
+            public int EndIndex { get; }
+            public int LeftIndex { get; }
+            public int RightIndex { get; }
             public Position BeginPosition { get; }
             public Position EndPosition { get; }
-            public Vector3 LeftPosition { get; }
-            public Vector3 RightPosition { get; }
+            public Position LeftPosition { get; }
+            public Position RightPosition { get; }
             public Normal NormalA { get; }
             public Normal NormalB { get; private set; }
             public Color BeginColor { get; }
             public Color EndColor { get; }
             public BoneWeight BeginBoneWeight { get; internal set; }
             public BoneWeight EndBoneWeight { get; internal set; }
+            public BoneWeight LeftBoneWeight { get; internal set; }
+            public BoneWeight RightBoneWeight { get; internal set; }
             public int Priority { get; }
             public bool NoSmooth { get; set; }
             public bool NoCull { get; set; }
             public bool NoFront { get; set; }
             //
-            public Wire(int subMeshIndex, Position vtxA, Position vtxB, Vector3 left, Vector3 right, Normal nmlA, Normal nmlB, Color colA, Color colB, int priority)
+            internal Wire(
+                int subMeshIndex,
+                int idxA, int idxB,
+                int idxC, int idxD,
+                Position vtxA, Position vtxB,
+                Position left, Position right,
+                Normal nmlA, Normal nmlB,
+                Color colA, Color colB,
+                int priority
+            )
             {
                 SubMeshIndex = subMeshIndex;
+                BeginIndex = idxA;
+                EndIndex = idxB;
+                LeftIndex = idxC;
+                RightIndex = idxD;
                 BeginPosition = vtxA;
                 EndPosition = vtxB;
                 LeftPosition = left;
@@ -49,7 +68,10 @@ namespace Yoji.Editor
 
         private readonly TriangleProvider _provider;
         private List<Wire> _wires = new List<Wire>();
+        private List<Position> _positions = new List<Position>();
+        private List<BoneWeight> _boneWeights = new List<BoneWeight>();
         private Dictionary<TriangleEdgeId, int> _wireMap = new Dictionary<TriangleEdgeId, int>();
+        private Dictionary<int, int> _positionMap = new Dictionary<int, int>();
         public bool DestroyUselessWire = true;
 
         public FrameConstructor(TriangleProvider provider)
@@ -59,6 +81,11 @@ namespace Yoji.Editor
 
         public void Construct()
         {
+            _wires.Clear();
+            _positions.Clear();
+            _boneWeights.Clear();
+            _wireMap.Clear();
+            _positionMap.Clear();
             foreach (var triangle in _provider.AllTriangles)
             {
                 AddTriangle(triangle, 0);
@@ -84,20 +111,33 @@ namespace Yoji.Editor
         {
             var id = triangle.GetEdgeID(edge);
             var smi = triangle.SubMeshIndex;
-            var positions = triangle.GetPositions(edge);
+            var (idxA, idxB) = triangle.GetIndices(edge);
+            var (posA, posB) = triangle.GetPositions(edge);
 
-            var left = triangle.GetPosition(edge.Next.First);
+            // edge.Next.First は edge.Second と恒等になってしまうため、3番目の頂点は edge.Second.Next で取る
+            var idxC = triangle.GetIndex(edge.Second.Next);
+            var posC = triangle.GetPosition(edge.Second.Next);
 
             var selfNormal = (nocull)? Normal.Invalid : triangle.FaceNormal;
-            var other = _provider.FindAdjacentTriangle(triangle, edge);
-            if (!nocull && other == null) return 0;
-            //var right = other
-            var otherNormal = (other != null)? other.FaceNormal : Normal.Invalid;
+            var sideTriangle = _provider.FindAdjacentTriangle(triangle, edge);
+            if (!nocull && sideTriangle == null) return 0;
+
+            var idxD = -1;
+            var posD = default(Position);
+            var otherNormal = Normal.Invalid;
+            if (sideTriangle != null)
+            {
+                var sideEdge = sideTriangle.FindEdgeWithId(id);
+                idxD = sideTriangle.GetIndex(sideEdge.Second.Next);
+                posD = sideTriangle.GetPosition(sideEdge.Second.Next);
+                otherNormal = sideTriangle.FaceNormal;
+            }
+
             var colors = triangle.GetColors(edge);
 
             var selfSubMesh = triangle.SubMeshIndex;
-            var otherSubMesh = (other == null)? -1 : other.SubMeshIndex;
-            var otherIsFin = (other == null)? false : other.IsFin;
+            var otherSubMesh = (sideTriangle == null)? -1 : sideTriangle.SubMeshIndex;
+            var otherIsFin = (sideTriangle == null)? false : sideTriangle.IsFin;
 
             if (
                 !nocull &&
@@ -107,15 +147,27 @@ namespace Yoji.Editor
                 !otherIsFin
             ) return 0;
 
-            var vtxA = positions.First;
-            var vtxB = positions.Second;
             var nmlA = selfNormal;
             var nmlB = otherNormal;
-            var wire = new Wire(smi, vtxA, vtxB, (Vector3)left, Vector3.one, nmlA, nmlB, colors.First, colors.Second, priority);
+            var wire = new Wire(
+                smi,
+                idxA, idxB, idxC, idxD,
+                posA, posB, posC, posD,
+                nmlA, nmlB,
+                colors.First, colors.Second,
+                priority
+            );
+
             if (triangle.HasBoneWeights)
             {
                 wire.BeginBoneWeight = triangle.GetBoneWeight(edge.First);
                 wire.EndBoneWeight = triangle.GetBoneWeight(edge.Second);
+                wire.LeftBoneWeight = triangle.GetBoneWeight(edge.Second.Next);
+            }
+            if (sideTriangle != null && sideTriangle.HasBoneWeights)
+            {
+                var sideEdge = sideTriangle.FindEdgeWithId(id);
+                wire.RightBoneWeight = sideTriangle.GetBoneWeight(sideEdge.Second.Next);
             }
             wire.NoCull = nocull;
             wire.NoSmooth = wire.NoFront = otherIsFin;
@@ -198,15 +250,28 @@ namespace Yoji.Editor
                         {
                             var wire = _wires[i];
                             if (wire.SubMeshIndex != smi) continue;
+                //int beginIndex, int endIndex, int leftIndex, int rightIndex,
+                //Vector3 beginPos, Vector3 endPos,
+                //Vector3 leftPos, Vector3 rightPos,
+                //Color col0, Color col1,
+                //BoneWeight wgt0, BoneWeight wgt1,
+                //BoneWeight wgt2, BoneWeight wgt3,
+                //bool nosmoothangle, bool nocull, bool nofront
                             subMesh.AddLine(
+                                wire.BeginIndex,
+                                wire.EndIndex,
+                                wire.LeftIndex,
+                                wire.RightIndex,
                                 (Vector3)wire.BeginPosition,
                                 (Vector3)wire.EndPosition,
-                                (Vector3)wire.NormalA,
-                                (Vector3)wire.NormalB,
+                                (Vector3)wire.LeftPosition,
+                                (Vector3)wire.RightPosition,
                                 wire.BeginColor,
                                 wire.EndColor,
                                 wire.BeginBoneWeight,
                                 wire.EndBoneWeight,
+                                wire.LeftBoneWeight,
+                                wire.RightBoneWeight,
                                 wire.NoSmooth,
                                 wire.NoCull,
                                 wire.NoFront
