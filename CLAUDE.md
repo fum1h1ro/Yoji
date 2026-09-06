@@ -18,8 +18,12 @@ Unityで自作ScriptableRenderPipelineを使ったゲーム。
 
 - エッジ1本 = 細長い矩形（2 Triangle）
 - プリミティブは `TRIANGLES`（LINEは使わない）
-- **メッシュ変換はModelImport時（ScriptedImporter）にやっている。ランタイムでのコストはゼロ。**
-- 普通のMeshRendererと同じ扱いでよい
+- 頂点は位置＋エッジ両側の面法線2本を持つ。線を描画するか・太さをどうするかの判定は全て `YojiSimple.shader` 側で行う。C#/Job側は正しい位置と法線2本を渡すことに専念する
+- **非SkinnedMesh**: ModelImport時（`Importer.cs`のScriptedImporter）に法線まで確定させ`VertexBuffer`に直接焼き込む。ランタイムコストはゼロ。普通のMeshRendererのまま
+- **SkinnedMesh**: バインドポーズでは最終形状が決まらないため、ModelImport時は4頂点（Begin/End/Left/Right）とBoneWeightを`FrameStructure`(ScriptableObject)に保持するだけに留め、法線計算はランタイムの`FrameRenderer`のJobで行う（4ボーンLBS→毎フレーム2面法線を再計算）。`SkinnedMeshRenderer`は`FrameRenderer`に差し替えられる
+- `DestroyUselessWire`（隣接三角形の法線が同じならワイヤーを削除する最適化）はバインドポーズ時点の判定なので**SkinnedMeshには使えない**（変形後に必要な線が消える）。`ConvertSkinnedMesh`では常に無効化する
+- 罠: `TriangleEdge.Next.First` は `edge.Second` と数学的に恒等になる。三角形の3番目の頂点は `edge.Second.Next` で取ること。隣接三角形は共有辺の巻きが逆なので、隣接側の法線は基準点をend側にして計算する
+- 罠: `YojiImporter.GetVersion()` が固定値のため、インポーターのコードを変えても既存の.fbxは自動再インポートされない。変換ロジックを直したら対象アセットを強制再インポートする
 
 ### アキュムレーション型モーションブラー
 
