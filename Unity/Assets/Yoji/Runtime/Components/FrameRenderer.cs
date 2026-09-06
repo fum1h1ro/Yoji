@@ -140,41 +140,6 @@ namespace Yoji.Components
             bones.Dispose();
         }
 
-        /*
-        [BurstCompile]
-        private struct ResetDebrisJob : IJobParallelFor
-        {
-            //[ReadOnly] public PseudoRandom Random;
-            [ReadOnly] public NativeArray<float3> Positions;
-
-            public void Execute(int index)
-            {
-            }
-        }
-
-        private void ResetDebris()
-        {
-            if (!_positions.IsCreated) return;
-#if USE_JOB
-            var job = new ResetDebrisJob()
-            {
-                Random = _random,
-                Positions = _positions,
-                Debris = _debris,
-            };
-
-            var handle = job.Schedule(_debris.Length, 0);
-            handle.Complete();
-#else
-            for (var i = 0; i < _debris.Length; ++i)
-            {
-                var center = _positions[i];
-                _debris[i] = MakeDebri(i, center, ref _random);
-            }
-#endif
-        }
-        */
-
         [BurstCompile]
         private struct CalculateJob : IJobParallelFor
         {

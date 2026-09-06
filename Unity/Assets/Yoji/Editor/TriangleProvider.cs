@@ -214,11 +214,9 @@ namespace Yoji.Editor
                     Add(smi, posIdxA, posIdxB, posIdxC, idxA, idxB, idxC);
                 }
             }
-            //foreach (var t in _triangles) Debug.Log(t.ToString());
             SearchIndependentTriangles();
             SearchFinTriangles();
             Sort();
-            foreach (var t in _triangles) Debug.Log(t.ToString());
         }
 
         private Triangle Add(int subMeshIndex, int posIdxA, int posIdxB, int posIdxC, int vtxIdxA, int vtxIdxB, int vtxIdxC)
@@ -262,10 +260,6 @@ namespace Yoji.Editor
             {
                 if (a.SubMeshIndex < b.SubMeshIndex) return AisSmaller;
                 if (a.SubMeshIndex > b.SubMeshIndex) return BisSmaller;
-                //if (a.IsIndependent) return AisSmaller;
-                //if (b.IsIndependent) return BisSmaller;
-                //if (a.IsFin) return BisSmaller;
-                //if (b.IsFin) return AisSmaller;
                 return Same;
             });
         }

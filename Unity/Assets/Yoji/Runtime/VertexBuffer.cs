@@ -104,7 +104,6 @@ namespace Yoji
         public int AutoExpandScale = 0;
         private int _vertexCount;
         private bool _isInCreateSubMesh;
-        private bool _isInRawAccess;
         private NativeArray<uint> Indices;
         private NativeArray<Vertex> Vertices;
         private Mesh _targetMesh;
@@ -170,7 +169,6 @@ namespace Yoji
 
         public RawAccessor BeginRawAccess()
         {
-            _isInRawAccess = true;
             return new RawAccessor(this);
         }
         internal void EndRawAccess(ref RawAccessor accessor)
@@ -179,8 +177,6 @@ namespace Yoji
 
             var last = _subMeshes[_subMeshes.Count - 1];
             _vertexCount = last.IndexStart + last.IndexCount;
-
-            _isInRawAccess = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

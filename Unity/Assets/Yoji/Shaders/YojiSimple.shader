@@ -39,8 +39,6 @@ Shader "Yoji/Simple"
             #pragma vertex vert
             #pragma fragment frag
             //#pragma debug
-            //#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
-            //#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
             #include "UnityCG.cginc"
             #define NO_OPTIMIZE
             //#define NO_CULL // 線分のカリングをしない(NO_OPTIMIZE時のみ有効)
@@ -270,21 +268,11 @@ Shader "Yoji/Simple"
                 half4 linedensity = half4(_BackLineDensity, _EdgeLineDensity, _EdgeLineDensity, _FrontLineDensity);
                 outputColor *= linedensity[wireFlag & 0x03];
 
-
-
-
-
-
                 const half4 apply = half4(1, 0, 0, 1);
                 const half2 lineWidthScale = half2(0, 1);
                 int smooth_angle = calc_smooth_angle(worldNormal0, worldNormal1);
                 lineWidth *= 1.0 - (lineWidthScale[smooth_angle | noSmoothAngle] * apply[wireFlag & 0x03]);
 #endif // NO_OPTIMIZE
-
-
-                //lineWidth *= (v.flag & 1)? 1 : 0;
-                //outputColor = float4(1, 1, 1, 1);
-                //lineWidth = 2;
 
                 outputPos.xy += vert * lineWidth * v.adjuster.y;
                 outputPos.xy += horz * lineWidth * v.adjuster.x;

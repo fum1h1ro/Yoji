@@ -7,8 +7,4 @@ namespace Yoji
         NoSmoothAngle = (1<<1),
         NoFront = (1<<2),
     }
-
-    public static class Constants
-    {
-    }
 }

@@ -48,15 +48,6 @@ namespace Yoji.UI
                 }
                 var height = (Lines * font.Height + LineSpacing * (Lines-1)) * Scale;
                 Rect = new Rect(0.0f, 0.0f, width, height);
-#if false//UNITY_EDITOR
-                Debug.Log("Scale:" + Scale);
-                Debug.Log("Lines:" + Lines);
-                Debug.Log("Rect:" + Rect);
-                foreach (var w in Widths)
-                {
-                    Debug.Log("Widths:" + w);
-                }
-#endif
             }
 
             void Flush(ref int nchar, ref float w)
