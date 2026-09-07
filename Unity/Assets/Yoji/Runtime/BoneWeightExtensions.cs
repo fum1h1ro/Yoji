@@ -3,7 +3,7 @@ using UnityEngine.Assertions;
 
 namespace Yoji
 {
-    public static class Extensions
+    public static class BoneWeightExtensions
     {
         public static int GetBoneCount(this BoneWeight weight)
         {

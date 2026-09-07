@@ -16,12 +16,12 @@ namespace Yoji
         }
     }
 
-    public struct ReadonlySubMesh
+    public struct SubMeshRange
     {
         public readonly int IndexStart;
         public readonly int IndexCount;
 
-        public ReadonlySubMesh(int indexStart, int indexCount)
+        public SubMeshRange(int indexStart, int indexCount)
         {
             IndexStart = indexStart;
             IndexCount = indexCount;

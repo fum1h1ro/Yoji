@@ -14,12 +14,12 @@ namespace Yoji
     {
         [Serializable]
         [StructLayout(LayoutKind.Sequential)]
-        public struct WeightsAndIndices
+        public struct BoneWeight4
         {
             public float4 Weights;
             public uint4 Indices;
 
-            public WeightsAndIndices(float4 weights, uint index0, uint index1, uint index2, uint index3)
+            public BoneWeight4(float4 weights, uint index0, uint index1, uint index2, uint index3)
             {
                 Weights = weights;
                 Indices.x = index0;
@@ -28,7 +28,7 @@ namespace Yoji
                 Indices.w = index3;
             }
 
-            public WeightsAndIndices(BoneWeight bw)
+            public BoneWeight4(BoneWeight bw)
             {
                 Weights = new float4(bw.weight0, bw.weight1, bw.weight2, bw.weight3);
                 Indices = new uint4((uint)bw.boneIndex0, (uint)bw.boneIndex1, (uint)bw.boneIndex2, (uint)bw.boneIndex3);
@@ -40,7 +40,7 @@ namespace Yoji
         public struct Vertex
         {
             public float3 Position;
-            public WeightsAndIndices Weight;
+            public BoneWeight4 Weight;
         }
 
         [Serializable]
@@ -280,7 +280,7 @@ namespace Yoji
             var vertex = new Vertex
             {
                 Position = pos,
-                Weight = new WeightsAndIndices(weight)
+                Weight = new BoneWeight4(weight)
             };
             _vertices.Add(vertex);
             return index;

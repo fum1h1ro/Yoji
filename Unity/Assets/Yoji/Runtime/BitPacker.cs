@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace Yoji {
-	public static class Utility {
+	public static class BitPacker {
 		public static float PackFloatInt(float f, uint i, int numBitI, int numBitTarget) {
 			// Constant optimize by compiler
 			float precision = (float)(1 << numBitTarget);

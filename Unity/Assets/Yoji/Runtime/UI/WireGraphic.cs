@@ -93,7 +93,7 @@ namespace Yoji.UI
         }
     }
 
-    public static class Extensions
+    public static class RectTransformExtensions
     {
         public static Rect MakeRect(this RectTransform rt)
         {

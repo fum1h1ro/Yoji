@@ -12,7 +12,7 @@ using Yoji.Components;
 
 namespace Yoji.Editor
 {
-    public class YojiImporter : AssetPostprocessor
+    public class Importer : AssetPostprocessor
     {
         private bool IsReadableBackup;
 
@@ -118,7 +118,7 @@ namespace Yoji.Editor
                 mat.SetFloat("_BackLineDensity", setting.DefaultBackLineDensity);
                 mat.SetFloat("_EdgeLineDensity", setting.DefaultEdgeLineDensity);
                 mat.SetFloat("_FrontLineDensity", setting.DefaultFrontLineDensity);
-                mat.SetFloat("_SmoothAngle", YojiCosAngleDrawer.ConvertAngle(setting.DefaultSmoothAngle));
+                mat.SetFloat("_SmoothAngle", CosAngleDrawer.ConvertAngle(setting.DefaultSmoothAngle));
             }
         }
     }

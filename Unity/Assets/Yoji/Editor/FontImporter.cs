@@ -8,8 +8,8 @@ using UnityEditor;
 
 namespace Yoji.Editor
 {
-    [UnityEditor.AssetImporters.ScriptedImporter(1, "lff")]
-    public class YojiFontImporter : UnityEditor.AssetImporters.ScriptedImporter
+    [UnityEditor.AssetImporters.ScriptedImporter(2, "lff")]
+    public class FontImporter : UnityEditor.AssetImporters.ScriptedImporter
     {
         public override void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
         {
@@ -60,7 +60,7 @@ namespace Yoji.Editor
                         foreach (var vec in buffer) {
                             font.AddPoint(vec.x, vec.y);
                         }
-                        font.SetTable(code, offset, length);
+                        font.SetGlyph(code, offset, length);
                         code = -1;
                     }
 

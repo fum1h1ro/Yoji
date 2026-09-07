@@ -72,7 +72,7 @@ namespace Yoji
         }
 
         [System.Serializable]
-        public struct Table
+        public struct Glyph
         {
             private const int OffsetWidth = 24;
             private const int LengthWidth = 8;
@@ -84,7 +84,7 @@ namespace Yoji
             [SerializeField] private FixedValue _left;
             [SerializeField] private FixedValue _right;
 
-            public Table(int offset, int length)
+            public Glyph(int offset, int length)
             {
                 _offsetAndLength = 0U;
                 _left = FixedValue.MaxValue;
@@ -129,41 +129,41 @@ namespace Yoji
 
         [SerializeField] private FixedValue _bottom = FixedValue.MaxValue;
         [SerializeField] private FixedValue _top = FixedValue.MinValue;
-        [SerializeField] private Table[] _tables;
+        [SerializeField] private Glyph[] _glyphs;
         [SerializeField] private Point[] _points;
-        private List<Table> _tableWork;
+        private List<Glyph> _glyphWork;
         private List<Point> _pointWork;
 
 #if UNITY_EDITOR
         public void BeginEdit()
         {
-            Assert.IsNull(_tableWork);
+            Assert.IsNull(_glyphWork);
             Assert.IsNull(_pointWork);
-            _tableWork = (_tables == null)? new List<Table>() : _tables.ToList();
+            _glyphWork = (_glyphs == null)? new List<Glyph>() : _glyphs.ToList();
             _pointWork = (_points == null)? new List<Point>() : _points.ToList();
         }
 
         public void EndEdit()
         {
-            Assert.IsNotNull(_tableWork);
+            Assert.IsNotNull(_glyphWork);
             Assert.IsNotNull(_pointWork);
-            _tables = _tableWork.ToArray();
+            _glyphs = _glyphWork.ToArray();
             _points = _pointWork.ToArray();
-            _tableWork = null;
+            _glyphWork = null;
             _pointWork = null;
         }
 
-        public void SetTable(int code, int offset, int length)
+        public void SetGlyph(int code, int offset, int length)
         {
-            Assert.IsNotNull(_tableWork);
+            Assert.IsNotNull(_glyphWork);
             Assert.IsTrue(0 <= code && code <= 0xffff);
 
-            while (_tableWork.Count <= code)
+            while (_glyphWork.Count <= code)
             {
-                _tableWork.Add(new Table(0, 0));
+                _glyphWork.Add(new Glyph(0, 0));
             }
 
-            var table = new Table(offset, length);
+            var glyph = new Glyph(offset, length);
             var left = float.MaxValue;
             var right = float.MinValue;
             for (int i = 0; i < length; ++i)
@@ -172,10 +172,10 @@ namespace Yoji
                 right = Mathf.Max(right, _pointWork[offset+i].x);
             }
 
-            table.Left = 0.0f;
-            table.Right = right - left;
+            glyph.Left = 0.0f;
+            glyph.Right = right - left;
 
-            _tableWork[code] = table;
+            _glyphWork[code] = glyph;
 
             for (int i = 0; i < length; ++i)
             {
@@ -201,8 +201,8 @@ namespace Yoji
             }
         }
 #endif
-        public Table Get(char c) => _tables[System.Convert.ToInt32(c)];
-        public Table Get(int code) => _tables[code];
+        public Glyph Get(char c) => _glyphs[System.Convert.ToInt32(c)];
+        public Glyph Get(int code) => _glyphs[code];
         public Point[] Points => _points;
         public float Top => _top.Value;
         public float Bottom => _bottom.Value;
