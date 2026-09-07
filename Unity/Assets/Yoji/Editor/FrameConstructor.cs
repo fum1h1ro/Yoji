@@ -19,8 +19,8 @@ namespace Yoji.Editor
             public Position EndPosition { get; }
             public Position LeftPosition { get; }
             public Position RightPosition { get; }
-            public Normal NormalA { get; }
-            public Normal NormalB { get; }
+            public Normal SelfNormal { get; }
+            public Normal OtherNormal { get; }
             public Color BeginColor { get; }
             public Color EndColor { get; }
             public BoneWeight BeginBoneWeight { get; internal set; }
@@ -52,8 +52,8 @@ namespace Yoji.Editor
                 EndPosition = vtxB;
                 LeftPosition = left;
                 RightPosition = right;
-                NormalA = nmlA;
-                NormalB = nmlB;
+                SelfNormal = nmlA;
+                OtherNormal = nmlB;
                 BeginColor = colA;
                 EndColor = colB;
                 Priority = priority;
@@ -214,8 +214,8 @@ namespace Yoji.Editor
                         sm.AddLine(
                             (Vector3)wire.BeginPosition,
                             (Vector3)wire.EndPosition,
-                            (Vector3)wire.NormalA,
-                            (Vector3)wire.NormalB,
+                            (Vector3)wire.SelfNormal,
+                            (Vector3)wire.OtherNormal,
                             wire.BeginColor,
                             wire.EndColor,
                             wire.NoSmooth,

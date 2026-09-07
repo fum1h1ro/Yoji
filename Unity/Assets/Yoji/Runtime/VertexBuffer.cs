@@ -91,13 +91,13 @@ namespace Yoji
             {
                 var s = indexStart * NumberOfVerticesOfLine;
                 var c = indexCount * NumberOfVerticesOfLine;
-                _vb._subMeshes.Add(new ReadonlySubMesh(s, c));
+                _vb._subMeshes.Add(new SubMeshRange(s, c));
             }
         }
 
         public const int NumberOfVerticesOfLine = 6;
         private int _numLines = 0;
-        private List<ReadonlySubMesh> _subMeshes = new List<ReadonlySubMesh>();
+        private List<SubMeshRange> _subMeshes = new List<SubMeshRange>();
         public int LineCapacity => _numLines;
         public int LineCount => _vertexCount / NumberOfVerticesOfLine;
         public int VertexCapacity => _numLines * NumberOfVerticesOfLine;
@@ -163,7 +163,7 @@ namespace Yoji
         }
         internal void CreateSubMeshEnd(int start, int count)
         {
-            _subMeshes.Add(new ReadonlySubMesh(start, count));
+            _subMeshes.Add(new SubMeshRange(start, count));
             _isInCreateSubMesh = false;
         }
 

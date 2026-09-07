@@ -3,7 +3,7 @@ Shader "Yoji/Simple"
     Properties
     {
         _LineWidth ("LineWidth", Range(1.0, 10.0)) = 2.0
-        [YojiCosAngle] _SmoothAngle ("SmoothAngle", Range(0.0, 180.0)) = 0.5
+        [CosAngle] _SmoothAngle ("SmoothAngle", Range(0.0, 180.0)) = 0.5
         [HDR] _Color ("Color", Color) = (1, 1, 1, 1)
         _BackLineDensity ("BackLineDensity", Range(0.0, 1.0)) = 0.05
         _EdgeLineDensity ("EdgeLineDensity", Range(0.0, 1.0)) = 1.0

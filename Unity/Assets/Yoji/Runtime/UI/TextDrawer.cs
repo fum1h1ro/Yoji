@@ -7,7 +7,7 @@ namespace Yoji.UI
 {
     public class TextDrawer : WireGraphic
     {
-        internal class TextInformation
+        internal class TextLayout
         {
             int FontSize = 16;
             int LetterSpacing = 1;
@@ -59,7 +59,7 @@ namespace Yoji.UI
             }
         }
         //
-        TextInformation Information = new TextInformation();
+        TextLayout _layout = new TextLayout();
         Rect Rect;
         public YojiFont Font;
         [TextArea(1, 32)] [SerializeField] public string Text;
@@ -94,7 +94,7 @@ namespace Yoji.UI
             {
                 return;
             }
-            Information.Analyze(Font, Text, FontSize, LetterSpacing, LineSpacing);
+            _layout.Analyze(Font, Text, FontSize, LetterSpacing, LineSpacing);
             MakeText();
         }
 
@@ -143,16 +143,16 @@ namespace Yoji.UI
             case TextAnchor.UpperCenter:
             case TextAnchor.MiddleCenter:
             case TextAnchor.LowerCenter:
-                offset.x = anchor.x - Information.Widths[nline-1] * 0.5f;
+                offset.x = anchor.x - _layout.Widths[nline-1] * 0.5f;
                 break;
             case TextAnchor.UpperRight:
             case TextAnchor.MiddleRight:
             case TextAnchor.LowerRight:
-                offset.x = anchor.x - Information.Widths[nline-1];
+                offset.x = anchor.x - _layout.Widths[nline-1];
                 break;
             }
 
-            float textdown = (Font.Size * nline + LineSpacing * (nline-1)) * Information.Scale;
+            float textdown = (Font.Size * nline + LineSpacing * (nline-1)) * _layout.Scale;
 
             switch (TextAnchor)
             {
@@ -165,12 +165,12 @@ namespace Yoji.UI
             case TextAnchor.MiddleLeft:
             case TextAnchor.MiddleCenter:
             case TextAnchor.MiddleRight:
-                offset.y = anchor.y + Information.Rect.height * 0.5f - textdown;
+                offset.y = anchor.y + _layout.Rect.height * 0.5f - textdown;
                 break;
             case TextAnchor.LowerLeft:
             case TextAnchor.LowerCenter:
             case TextAnchor.LowerRight:
-                offset.y = anchor.y + Information.Rect.height - textdown;
+                offset.y = anchor.y + _layout.Rect.height - textdown;
                 break;
             }
 
@@ -218,7 +218,7 @@ namespace Yoji.UI
         void AddChar(ref VertexBuffer.SubMeshCreator sm, ref Vector2 pos, char c, Color color)
         {
             var table = Font.Get(c);
-            var s = Information.Scale;
+            var s = _layout.Scale;
 
             for (int i = 0; i < table.Length / 2; ++i)
             {
