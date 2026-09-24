@@ -5,9 +5,9 @@ Shader "Yoji/Simple"
         _LineWidth ("LineWidth", Range(1.0, 10.0)) = 2.0
         [CosAngle] _SmoothAngle ("SmoothAngle", Range(0.0, 180.0)) = 0.5
         [HDR] _Color ("Color", Color) = (1, 1, 1, 1)
-        _BackLineDensity ("BackLineDensity", Range(0.0, 1.0)) = 0.05
-        _EdgeLineDensity ("EdgeLineDensity", Range(0.0, 1.0)) = 1.0
-        _FrontLineDensity ("FrontLineDensity", Range(0.0, 1.0)) = 1.0
+        [Gamma] _BackLineDensity ("BackLineDensity", Range(0.0, 1.0)) = 0.05
+        [Gamma] _EdgeLineDensity ("EdgeLineDensity", Range(0.0, 1.0)) = 1.0
+        [Gamma] _FrontLineDensity ("FrontLineDensity", Range(0.0, 1.0)) = 1.0
         [Toggle(_PLANECLIP_ON)] _PlaneClip ("PlaneClip", Int) = 0
         [Toggle(_BREAK_ON)] _BreakOn ("Break", Int) = 0
         _BreakLevel ("BreakLevel", Float) = 0.0
@@ -208,7 +208,13 @@ Shader "Yoji/Simple"
                 //
                 outputPos.xyz *= (1.0/outputPos.w);
 
-                float4 outputColor = (v.color * ColorScale) * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+                // v.colorは8bitの生バイト（sRGB想定）。メッシュの頂点カラーストリームはUnityが自動変換しないため、
+                // Linear空間ではここで明示的にGamma→Linear変換する（UNITY_COLORSPACE_GAMMA未定義=Linear時のみ）
+                float4 vertexColor = v.color * ColorScale;
+#ifndef UNITY_COLORSPACE_GAMMA
+                vertexColor.rgb = GammaToLinearSpace(vertexColor.rgb);
+#endif
+                float4 outputColor = vertexColor * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
                 float dot0 = dot(worldNormal0, viewVec);
                 float dot1 = dot(worldNormal1, viewVec);
 

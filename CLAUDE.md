@@ -41,6 +41,20 @@ Unityで自作ScriptableRenderPipelineを使ったゲーム。
 - ループはSRPの `Render()` 内で完全制御
 - 各サブステップ後にECSのJobをCompleteしてmatrix配列を取得し描画
 
+### カラースペース・HDR
+
+- **カラースペース**: Linear。頂点カラー（`Color32`、sRGB想定の生バイト）はUnityが自動変換しないため、`YojiSimple.shader`側で明示的にGamma→Linear変換する。線の濃度パラメータ（`_BackLineDensity`等）は`[Gamma]`を付け、Gammaで調整した見た目のまま自動変換に任せる
+- **シーンRT**: `GraphicsFormat.R16G16B16A16_SFloat`。UNORMは加算が1.0でクランプされ、`R11G11B10`は仮数が6/5bitしかなく明るい所に重ねた薄い線が消える
+- 全て加算合成なので、float RTなら各サブステップを1枚のRTへ1/N倍で加算描画すれば、N枚平均のアキュムレーションと等価になる（`YojiBlurComposit`は不要になる見込み）
+- **最終パス**: `Hidden/Yoji/Final`（`YojiFinal.shader`）をフルスクリーン三角形（`DrawProcedural`、3頂点、メッシュ不要）で描き、シーンRTをバックバッファへ書く
+  - `HDROutputSettings.main.active`のとき: `HDROutputUtils.ConfigureHDROutput(mat, HDROutputSettings.main.displayColorGamut, Operation.ColorConversion | Operation.ColorEncoding)`を呼び、`_PaperWhite`/`_MinNits`/`_MaxNits`に`paperWhiteNits`/`minToneMapLuminance`/`maxToneMapLuminance`を渡す。Unity側の自動トーンマップと二重にならないよう`automaticHDRTonemapping = false`にする
+  - SDR時はキーワードを無効にしたまま使う
+  - HDR表示への切り替えは`HDROutputSettings.main.RequestHDRModeChange(true)`で行う（`PlayerSettings.useHDRDisplay`はオフのまま。起動時に自動でHDRへ切り替えない）
+  - `HDROutputUtils`を使うasmdefには`Unity.RenderPipelines.Core.Runtime`の参照が必要
+  - HDR出力の実機確認はEDR対応のMacか有機ELのiPhoneで行う。**iPhone SE2はHDR表示非対応**（True Tone Retina HD液晶、625 nits）なのでSDRフォールバックの動作確認のみ
+- `YojiBloom.shader`はLDR/Gamma時代のまま放置している。使う前に直す必要がある問題：alpha重みのGaussがfloat RTで段ごとに指数的に増幅する、彩度係数`1-a`がa>1で負になり`pow`でNaNになる、`pow(2.2)`のガンマカーブがLinearでは二重補正になる
+- エディタ（desktop Metal）は`half`=`float`なので、halfのオーバーフロー（`YojiBloom`の問題など）は実機でしか再現しない
+
 ### ECS（DOTS）
 
 - シミュレーション（物理・ゲームロジック）のみECSで管理
